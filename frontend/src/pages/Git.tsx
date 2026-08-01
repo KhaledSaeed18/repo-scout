@@ -14,7 +14,8 @@ import { RepoProvider, useRepoContext } from '../lib/repoctx'
 import RepoSelector from '../components/RepoSelector'
 
 function HeatmapGrid({ heatmap }: { heatmap: import('../lib/types').Heatmap }) {
-  const max = Math.max(1, ...heatmap.daily.map((d) => d.count))
+  const daily = heatmap.daily ?? []
+  const max = Math.max(1, ...daily.map((d) => d.count))
   const weeks: { date: string; count: number }[][] = []
   let week: { date: string; count: number }[] = []
   for (const d of heatmap.daily) {
@@ -86,7 +87,7 @@ function HourlyHeatmap({ hourly }: { hourly: number[][] }) {
 }
 
 function StreaksView({ streaks }: { streaks: import('../lib/types').StreaksResult[] }) {
-  if (!streaks.length) return <Empty message="No streak data" />
+  if (!streaks || !streaks.length) return <Empty message="No streak data" />
   return (
     <Card>
       <h3 className="mb-3 text-sm font-medium text-slate-300">Streaks</h3>

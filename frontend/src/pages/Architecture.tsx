@@ -120,10 +120,10 @@ function ArchitecturePage() {
                 rows={[
                   ['Nodes', nodeCount],
                   ['Edges', edges],
-                  ['Entry points', data.entryPoints.length],
-                  ['Dead files', data.deadFiles.length],
-                  ['Unused modules', data.unusedModules.length],
-                  ['Cycles', data.cycles.length],
+                  ['Entry points', (data.entryPoints ?? []).length],
+                  ['Dead files', (data.deadFiles ?? []).length],
+                  ['Unused modules', (data.unusedModules ?? []).length],
+                  ['Cycles', (data.cycles ?? []).length],
                 ]}
               />
             </Card>
@@ -134,19 +134,19 @@ function ArchitecturePage() {
                 rows={[
                   [
                     'Cycles',
-                    data.cycles.length
+                    (data.cycles ?? []).length
                       ? data.cycles.map((c) => c.join(' → ')).join(' | ')
                       : 'none',
                   ],
                   [
                     'Dead files',
-                    data.deadFiles.length
+                    (data.deadFiles ?? []).length
                       ? data.deadFiles.slice(0, 15).join(', ')
                       : 'none',
                   ],
                   [
                     'Unused modules',
-                    data.unusedModules.length
+                    (data.unusedModules ?? []).length
                       ? data.unusedModules.slice(0, 15).join(', ')
                       : 'none',
                   ],

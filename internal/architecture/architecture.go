@@ -109,6 +109,24 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 	folderGraph := buildFolderGraph(report.Edges, b.dirSet)
 	report.Cycles = tarjanCycles(folderGraph)
 	report.UnusedModules = unusedModules(b.dirSet, folderGraph, report.EntryPoints)
+	if report.EntryPoints == nil {
+		report.EntryPoints = []string{}
+	}
+	if report.DeadFiles == nil {
+		report.DeadFiles = []string{}
+	}
+	if report.Folders == nil {
+		report.Folders = []string{}
+	}
+	if report.Cycles == nil {
+		report.Cycles = [][]string{}
+	}
+	if report.UnusedModules == nil {
+		report.UnusedModules = []string{}
+	}
+	if report.Unresolved == nil {
+		report.Unresolved = []Edge{}
+	}
 	sort.Strings(report.DeadFiles)
 	sort.Strings(report.UnusedModules)
 	return report, nil
@@ -143,6 +161,24 @@ func ReportFromGraph(edges []Edge, files []models.File) Report {
 	folderGraph := buildFolderGraph(edges, dirSet)
 	report.Cycles = tarjanCycles(folderGraph)
 	report.UnusedModules = unusedModules(dirSet, folderGraph, report.EntryPoints)
+	if report.EntryPoints == nil {
+		report.EntryPoints = []string{}
+	}
+	if report.DeadFiles == nil {
+		report.DeadFiles = []string{}
+	}
+	if report.Folders == nil {
+		report.Folders = []string{}
+	}
+	if report.Cycles == nil {
+		report.Cycles = [][]string{}
+	}
+	if report.UnusedModules == nil {
+		report.UnusedModules = []string{}
+	}
+	if report.Unresolved == nil {
+		report.Unresolved = []Edge{}
+	}
 	sort.Strings(report.DeadFiles)
 	sort.Strings(report.UnusedModules)
 	return report

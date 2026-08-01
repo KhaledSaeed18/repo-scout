@@ -74,11 +74,13 @@ func ComputeHeatmap(db *gorm.DB, repoID uint) (Heatmap, error) {
 	if err != nil {
 		return Heatmap{}, err
 	}
-	h := Heatmap{Total: len(commits)}
+	h := Heatmap{Total: len(commits), Daily: []Day{}, Hourly: make([][]int, 7)}
 	if len(commits) == 0 {
+		for i := range h.Hourly {
+			h.Hourly[i] = make([]int, 24)
+		}
 		return h, nil
 	}
-	h.Hourly = make([][]int, 7)
 	for i := range h.Hourly {
 		h.Hourly[i] = make([]int, 24)
 	}
@@ -107,7 +109,7 @@ func Streaks(db *gorm.DB, repoID uint, email string) (StreaksResult, error) {
 	if err != nil {
 		return StreaksResult{}, err
 	}
-	res := StreaksResult{Email: email}
+	res := StreaksResult{Email: email, All: []Streak{}}
 	if len(commits) == 0 {
 		return res, nil
 	}
