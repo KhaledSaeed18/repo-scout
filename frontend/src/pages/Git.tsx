@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Card, Empty, Spinner, Table, Tabs } from '../components/ui'
-import { useCommits, useContributors, useHeatmap, useRepo } from '../lib/api'
+import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 import RepoSelector from '../components/RepoSelector'
 
@@ -143,6 +143,40 @@ function CommitsView({ repoId }: { repoId: number }) {
   if (!commits.length) return <Empty message="No commits" />
   return (
     <Table
+      headers={['Hash', 'Author', 'Date', 'Message', 'Files', '+', '−', 'Merge']}
+      rows={commits.map((c) => [
+        <code key="h" className="text-xs text-sky-400">
+          {c.hash.slice(0, 8)}
+        </code>,
+        c.author,
+        new Date(c.date).toLocaleDateString(),
+        <span key="m" className="max-w-96 truncate">
+          {c.message}
+        </span>,
+        c.filesChanged,
+        <span key="i" className="text-emerald-400">
+          +{c.insertions}
+        </span>,
+        <span key="d" className="text-rose-400">
+          −{c.deletions}
+        </span>,
+        c.isMerge ? (
+          <span key="m" className="text-amber-400 text-xs">✓</span>
+        ) : (
+          ''
+        ),
+      ])}
+    />
+  )
+}
+
+function LargestCommitsView({ repoId }: { repoId: number }) {
+  const { data, isLoading } = useLargestCommits(repoId)
+  if (isLoading) return <Spinner />
+  const commits = data?.commits ?? []
+  if (!commits.length) return <Empty message="No commits" />
+  return (
+    <Table
       headers={['Hash', 'Author', 'Date', 'Message', 'Files', '+', '−']}
       rows={commits.map((c) => [
         <code key="h" className="text-xs text-sky-400">
@@ -162,6 +196,79 @@ function CommitsView({ repoId }: { repoId: number }) {
         </span>,
       ])}
     />
+  )
+}
+
+function OwnershipView({ repoId }: { repoId: number }) {
+  const { data, isLoading } = useOwnership(repoId)
+  if (isLoading) return <Spinner />
+  const ownership = data?.byAuthor ?? []
+  if (!ownership.length) return <Empty message="No ownership data" />
+  return (
+    <Card>
+      <h3 className="mb-3 text-sm font-medium text-slate-300">
+        File ownership ({ownership.length} authors, {data?.total} files)
+      </h3>
+      <Table
+        headers={['Author', 'Files', 'Share']}
+        rows={ownership.map((o) => [
+          o.author,
+          o.files,
+          `${(o.share * 100).toFixed(1)}%`,
+        ])}
+      />
+    </Card>
+  )
+}
+
+function BranchesTagsView({ repoId }: { repoId: number }) {
+  const { data: branchesData, isLoading: branchesLoading } = useBranches(repoId)
+  const { data: tagsData, isLoading: tagsLoading } = useTags(repoId)
+  const branches = branchesData?.branches ?? []
+  const tags = tagsData?.tags ?? []
+  if (branchesLoading || tagsLoading) return <Spinner />
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <h3 className="mb-3 text-sm font-medium text-slate-300">Branches</h3>
+        {branches.length === 0 ? (
+          <Empty message="No branches" />
+        ) : (
+          <Table
+            headers={['Name', 'Commit', 'Current']}
+            rows={branches.map((b) => [
+              <span key="n" className={b.isCurrent ? 'text-sky-400 font-medium' : ''}>
+                {b.name}
+              </span>,
+              <code key="h" className="text-xs text-slate-500">
+                {b.commitHash.slice(0, 8)}
+              </code>,
+              b.isCurrent ? (
+                <span key="c" className="text-emerald-400 text-xs">HEAD</span>
+              ) : (
+                ''
+              ),
+            ])}
+          />
+        )}
+      </Card>
+      <Card>
+        <h3 className="mb-3 text-sm font-medium text-slate-300">Tags</h3>
+        {tags.length === 0 ? (
+          <Empty message="No tags" />
+        ) : (
+          <Table
+            headers={['Name', 'Commit']}
+            rows={tags.map((t) => [
+              t.name,
+              <code key="h" className="text-xs text-slate-500">
+                {t.commitHash.slice(0, 8)}
+              </code>,
+            ])}
+          />
+        )}
+      </Card>
+    </div>
   )
 }
 
@@ -209,7 +316,7 @@ function ContributorsTab({ repoId }: { repoId: number }) {
 
 function GitInner() {
   const { repoId } = useRepoContext()
-  const [tab, setTab] = useState<'activity' | 'commits' | 'contributors'>('activity')
+  const [tab, setTab] = useState<'activity' | 'commits' | 'contributors' | 'largest' | 'ownership' | 'branches-tags'>('activity')
   const repo = useRepo(repoId).data
   if (repoId === 0) return <Empty message="Scan a repository first" />
   return (
@@ -222,14 +329,20 @@ function GitInner() {
         tabs={[
           { id: 'activity', label: 'Activity' },
           { id: 'commits', label: 'Commits' },
+          { id: 'largest', label: 'Largest' },
           { id: 'contributors', label: 'Contributors' },
+          { id: 'ownership', label: 'Ownership' },
+          { id: 'branches-tags', label: 'Branches & Tags' },
         ]}
         active={tab}
         onChange={setTab}
       />
       {tab === 'activity' && <ActivityTab repoId={repoId} />}
       {tab === 'commits' && <CommitsView repoId={repoId} />}
+      {tab === 'largest' && <LargestCommitsView repoId={repoId} />}
       {tab === 'contributors' && <ContributorsTab repoId={repoId} />}
+      {tab === 'ownership' && <OwnershipView repoId={repoId} />}
+      {tab === 'branches-tags' && <BranchesTagsView repoId={repoId} />}
     </div>
   )
 }

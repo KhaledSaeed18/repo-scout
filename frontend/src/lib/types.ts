@@ -238,7 +238,44 @@ export interface DependenciesResponse {
   total: number
 }
 
+export interface LargestCommit {
+  hash: string
+  author: string
+  email: string
+  date: string
+  message: string
+  filesChanged: number
+  insertions: number
+  deletions: number
+}
+
+export interface Ownership {
+  byAuthor: OwnerSummary[]
+  total: number
+}
+
+export interface OwnerSummary {
+  author: string
+  files: number
+  share: number
+}
+
 export interface DuplicatesResponse {
   groups: DuplicateGroup[]
   total: number
+}
+
+export interface Branch {
+  id: number
+  repoId: number
+  name: string
+  commitHash: string
+  isCurrent: boolean
+}
+
+export interface Tag {
+  id: number
+  repoId: number
+  name: string
+  commitHash: string
 }

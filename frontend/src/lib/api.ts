@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   Architecture,
+  Branch,
   Commit,
   Contributor,
   DependenciesResponse,
@@ -8,11 +9,14 @@ import type {
   FileEntry,
   HeatmapResponse,
   Job,
+  LargestCommit,
   Metrics,
+  Ownership,
   RepoListResponse,
   Repository,
   SearchResult,
   Settings,
+  Tag,
   TreeResponse,
 } from './types'
 
@@ -62,6 +66,14 @@ export const api = {
     get<{ commits: Commit[] }>(`/api/repositories/${id}/commits?limit=${limit}`),
   contributors: (id: number) =>
     get<{ contributors: Contributor[] }>(`/api/repositories/${id}/contributors`),
+  largestCommits: (id: number) =>
+    get<{ commits: LargestCommit[] }>(`/api/repositories/${id}/largest-commits`),
+  ownership: (id: number) =>
+    get<Ownership>(`/api/repositories/${id}/ownership`),
+  branches: (id: number) =>
+    get<{ branches: Branch[] }>(`/api/repositories/${id}/branches`),
+  tags: (id: number) =>
+    get<{ tags: Tag[] }>(`/api/repositories/${id}/tags`),
   heatmap: (id: number) => get<HeatmapResponse>(`/api/repositories/${id}/heatmap`),
   dependencies: (id: number) => get<DependenciesResponse>(`/api/repositories/${id}/dependencies`),
   duplicates: (id: number) => get<DuplicatesResponse>(`/api/repositories/${id}/duplicates`),
@@ -124,6 +136,34 @@ export const useContributors = (id: number) =>
   useQuery({
     queryKey: ['contributors', id],
     queryFn: () => api.contributors(id),
+    enabled: id > 0,
+  })
+
+export const useLargestCommits = (id: number) =>
+  useQuery({
+    queryKey: ['largestCommits', id],
+    queryFn: () => api.largestCommits(id),
+    enabled: id > 0,
+  })
+
+export const useOwnership = (id: number) =>
+  useQuery({
+    queryKey: ['ownership', id],
+    queryFn: () => api.ownership(id),
+    enabled: id > 0,
+  })
+
+export const useBranches = (id: number) =>
+  useQuery({
+    queryKey: ['branches', id],
+    queryFn: () => api.branches(id),
+    enabled: id > 0,
+  })
+
+export const useTags = (id: number) =>
+  useQuery({
+    queryKey: ['tags', id],
+    queryFn: () => api.tags(id),
     enabled: id > 0,
   })
 
