@@ -33,10 +33,10 @@ type FileChange struct {
 
 // FileHistory is the rolled-up git history of one file.
 type FileHistory struct {
-	Author  string     `json:"author"`
-	First   time.Time  `json:"first"`
-	Last    time.Time  `json:"last"`
-	Commits int        `json:"commits"`
+	Author  string    `json:"author"`
+	First   time.Time `json:"first"`
+	Last    time.Time `json:"last"`
+	Commits int       `json:"commits"`
 }
 
 // ContributorStats is the rolled-up git activity of one author.
