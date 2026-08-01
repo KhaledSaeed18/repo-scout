@@ -87,7 +87,7 @@ func (d *Detector) Detect(ctx context.Context, repoID uint, root string, files [
 			continue
 		}
 		norm := langdetect.Normalize(lang, content)
-		if len(norm) < d.Window*2 {
+		if len(norm) < d.Window {
 			res.SkippedFiles++
 			continue
 		}
