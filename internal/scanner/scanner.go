@@ -19,6 +19,7 @@ import (
 
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
 	"github.com/KhaledSaeed18/repo-scout/internal/langdetect"
+	"github.com/KhaledSaeed18/repo-scout/internal/metrics"
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
 )
 
@@ -213,6 +214,7 @@ func process(repoID uint, root, path string, settings config.Settings) (models.F
 		f.LinesCode = loc.Code
 		f.LinesComment = loc.Comments
 		f.LinesBlank = loc.Blank
+		metrics.Analyze(f, string(content)).Apply(&f)
 	}
 	return f, true
 }
