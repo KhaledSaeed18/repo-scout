@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
@@ -51,9 +52,10 @@ func TestScan(t *testing.T) {
 
 	sc := New(db)
 	settings := config.Defaults()
-	var done, total int
+	var done, total atomic.Int64
 	stats, err := sc.Scan(context.Background(), repo.ID, root, settings, func(d, tt int) {
-		done, total = d, tt
+		done.Store(int64(d))
+		total.Store(int64(tt))
 	})
 	if err != nil {
 		t.Fatalf("scan: %v", err)
@@ -62,8 +64,8 @@ func TestScan(t *testing.T) {
 	if stats.FileCount != 4 {
 		t.Fatalf("file count: got %d, want 4", stats.FileCount)
 	}
-	if done != 4 || total != 4 {
-		t.Fatalf("progress: got %d/%d, want 4/4", done, total)
+	if done.Load() != 4 || total.Load() != 4 {
+		t.Fatalf("progress: got %d/%d, want 4/4", done.Load(), total.Load())
 	}
 	if stats.BinaryCount != 1 {
 		t.Fatalf("binary count: got %d, want 1", stats.BinaryCount)
