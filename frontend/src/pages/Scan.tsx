@@ -25,13 +25,11 @@ function statusColor(s: string) {
 }
 
 function JobRow({ job }: { job: Job }) {
-  const [busy, setBusy] = useState(false)
   const act = async (action: (typeof jobActions)[number]) => {
-    setBusy(true)
     try {
       await api.jobAction(job.id, action)
-    } finally {
-      setBusy(false)
+    } catch {
+      /* ignore */
     }
   }
   const buttons = jobActions
@@ -41,7 +39,7 @@ function JobRow({ job }: { job: Job }) {
         : job.status === 'running' || job.status === 'queued',
     )
     .map((a) => (
-      <Button key={a} variant="outline" className="text-xs" disabled={busy} onClick={() => void act(a)}>
+      <Button key={a} variant="outline" className="text-xs" onClick={() => void act(a)}>
         {a}
       </Button>
     ))

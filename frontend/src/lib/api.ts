@@ -98,7 +98,7 @@ export const api = {
 
 export const wsUrl = () => {
   const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  return `${proto}://${window.location.host}/api/ws`
+  return `${proto}://localhost:8080/api/ws`
 }
 
 export const useRepos = () =>
