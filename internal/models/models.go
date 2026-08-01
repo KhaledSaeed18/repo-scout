@@ -69,6 +69,11 @@ type File struct {
 	FirstCommitAt *time.Time `json:"firstCommitAt"`
 	LastCommitAt  *time.Time `json:"lastCommitAt"`
 	Commits       int        `json:"commits"`
+	FuncCount     int        `json:"funcCount"`
+	AvgFuncLen    float64    `json:"avgFuncLen"`
+	MaxFuncLen    int        `json:"maxFuncLen"`
+	AvgNesting    float64    `json:"avgNesting"`
+	MaxNesting    int        `json:"maxNesting"`
 }
 
 // Commit is one commit in the repository history.
