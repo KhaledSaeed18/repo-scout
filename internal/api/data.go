@@ -180,13 +180,20 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		return in[:n]
 	}
 
+	if largest == nil {
+		largest = []models.File{}
+	}
+	if mostComplex == nil {
+		mostComplex = []models.File{}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"totals":           totals,
 		"languages":        byLang,
 		"maxDepth":         maxDepth,
 		"deepestFile":      deepest,
-		"largestFiles":     top(largest, 10),
-		"mostComplexFiles": top(mostComplex, 10),
+		"largestFiles":     largest,
+		"mostComplexFiles": mostComplex,
 	})
 }
 

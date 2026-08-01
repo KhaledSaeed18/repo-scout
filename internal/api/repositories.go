@@ -122,6 +122,9 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "list files: "+err.Error())
 		return
 	}
+	if files == nil {
+		files = []models.File{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"files": files, "total": total})
 }
 

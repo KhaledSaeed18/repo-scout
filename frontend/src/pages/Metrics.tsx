@@ -89,31 +89,39 @@ function MetricsPage() {
       </div>
       <Card>
         <h3 className="mb-3 text-sm font-medium text-slate-300">Largest files</h3>
-        <Table
-          headers={['File', 'Code lines', 'Complexity', 'Functions']}
-          rows={data.largestFiles.map((f) => [
-            <span key="p" className="text-sky-400">
-              {f.path}
-            </span>,
-            f.linesCode,
-            f.complexity,
-            f.funcCount,
-          ])}
-        />
+        {(data.largestFiles ?? []).length === 0 ? (
+          <Empty message="No files" />
+        ) : (
+          <Table
+            headers={['File', 'Code lines', 'Complexity', 'Functions']}
+            rows={data.largestFiles.map((f) => [
+              <span key="p" className="text-sky-400">
+                {f.path}
+              </span>,
+              f.linesCode,
+              f.complexity,
+              f.funcCount,
+            ])}
+          />
+        )}
       </Card>
       <Card>
         <h3 className="mb-3 text-sm font-medium text-slate-300">Most complex files</h3>
-        <Table
-          headers={['File', 'Complexity', 'Functions', 'Max nesting']}
-          rows={data.mostComplexFiles.map((f) => [
-            <span key="p" className="text-sky-400">
-              {f.path}
-            </span>,
-            f.complexity,
-            f.funcCount,
-            f.maxNesting,
-          ])}
-        />
+        {(data.mostComplexFiles ?? []).length === 0 ? (
+          <Empty message="No files" />
+        ) : (
+          <Table
+            headers={['File', 'Complexity', 'Functions', 'Max nesting']}
+            rows={data.mostComplexFiles.map((f) => [
+              <span key="p" className="text-sky-400">
+                {f.path}
+              </span>,
+              f.complexity,
+              f.funcCount,
+              f.maxNesting,
+            ])}
+          />
+        )}
       </Card>
     </div>
   )
