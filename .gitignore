@@ -1,0 +1,73 @@
+# Operating System
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun.lockb
+
+# Package Managers
+.pnpm-store/
+
+# Build Output
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Temporary Files
+tmp/
+temp/
+.cache/
+
+# Testing
+playwright-report/
+test-results/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+
+# Generated Files
+generated/
