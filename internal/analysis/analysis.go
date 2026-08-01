@@ -170,7 +170,12 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 		return nil
 	}
 	var commits []models.Commit
-	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit) {
+	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, changes []gitrepo.FileChange) {
+		c.FilesChanged = len(changes)
+		for _, fc := range changes {
+			c.Insertions += fc.Add
+			c.Deletions += fc.Del
+		}
 		commits = append(commits, c)
 	})
 	if err != nil {

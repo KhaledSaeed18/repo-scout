@@ -216,8 +216,9 @@ func (a *Analyzer) AnalyzeHistory(ctx context.Context, root string) (map[string]
 }
 
 // AnalyzeHistoryWithCommits is like AnalyzeHistory but also invokes onCommit
-// for every commit as it streams, so callers can persist commits in one pass.
-func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit)) (map[string]*ContributorStats, map[string]*FileHistory, error) {
+// for every commit and its file changes as they stream, so callers can persist
+// commits in one pass.
+func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit, []FileChange)) (map[string]*ContributorStats, map[string]*FileHistory, error) {
 	contrib := map[string]*ContributorStats{}
 	files := map[string]*FileHistory{}
 
@@ -226,7 +227,7 @@ func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, o
 			c.Author = c.Email
 		}
 		if onCommit != nil {
-			onCommit(c)
+			onCommit(c, changes)
 		}
 		key := c.Email
 		if key == "" {
