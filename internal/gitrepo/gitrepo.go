@@ -211,12 +211,22 @@ func parseFileChange(line string) (FileChange, bool) {
 // AnalyzeHistory streams the whole history and rolls up contributor and
 // per-file statistics.
 func (a *Analyzer) AnalyzeHistory(ctx context.Context, root string) (map[string]*ContributorStats, map[string]*FileHistory, error) {
+	contrib, files, err := a.AnalyzeHistoryWithCommits(ctx, root, nil)
+	return contrib, files, err
+}
+
+// AnalyzeHistoryWithCommits is like AnalyzeHistory but also invokes onCommit
+// for every commit as it streams, so callers can persist commits in one pass.
+func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit)) (map[string]*ContributorStats, map[string]*FileHistory, error) {
 	contrib := map[string]*ContributorStats{}
 	files := map[string]*FileHistory{}
 
 	err := a.StreamLogs(ctx, root, func(c models.Commit, changes []FileChange) {
 		if c.Author == "" {
 			c.Author = c.Email
+		}
+		if onCommit != nil {
+			onCommit(c)
 		}
 		key := c.Email
 		if key == "" {
