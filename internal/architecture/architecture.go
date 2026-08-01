@@ -90,6 +90,11 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 	report := Report{
 		Edges:      b.edges,
 		Unresolved: b.unresolved,
+		EntryPoints: []string{},
+		DeadFiles:   []string{},
+		Folders:     []string{},
+		Cycles:      [][]string{},
+		UnusedModules: []string{},
 	}
 
 	fileToFiles := map[string][]string{}
@@ -119,7 +124,15 @@ func ReportFromGraph(edges []Edge, files []models.File) Report {
 		fileSet[f.Path] = true
 		dirSet[folderOf(f.Path)] = true
 	}
-	report := Report{Edges: edges}
+	report := Report{
+		Edges:        edges,
+		EntryPoints:  []string{},
+		DeadFiles:    []string{},
+		Folders:      []string{},
+		Cycles:       [][]string{},
+		UnusedModules: []string{},
+		Unresolved:   []Edge{},
+	}
 	fileToFiles := map[string][]string{}
 	for _, e := range edges {
 		fileToFiles[e.From] = append(fileToFiles[e.From], e.To)
