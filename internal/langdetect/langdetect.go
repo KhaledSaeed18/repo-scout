@@ -112,6 +112,62 @@ func (l *Lang) Count(content string) LOC {
 	return loc
 }
 
+// CodeLine is a normalized code line paired with its original line number.
+type CodeLine struct {
+	Text   string
+	Number int
+}
+
+// Normalize strips comments, collapses whitespace, lowercases, and drops
+// blank/comment-only lines. The returned lines keep their original 1-based
+// line numbers so callers can map back to the source file.
+func Normalize(lang *Lang, content string) []CodeLine {
+	var out []CodeLine
+	lines := strings.Split(content, "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	var blockClose string
+	inBlock := false
+	for i, line := range lines {
+		if inBlock {
+			if idx := strings.Index(line, blockClose); idx >= 0 {
+				inBlock = false
+				line = line[idx+len(blockClose):]
+			} else {
+				continue
+			}
+		}
+		code := line
+		if open := firstBlockStart(line, lang.BlockComments); open != "" {
+			idx := strings.Index(line, open)
+			code = line[:idx]
+			if close := afterBlockStart(open, lang.BlockComments); !strings.Contains(line[idx+len(open):], close) {
+				inBlock = true
+				blockClose = close
+			}
+		}
+		if idx := lineCommentIndex(code, lang.LineComments); idx >= 0 {
+			code = code[:idx]
+		}
+		t := strings.ToLower(strings.TrimSpace(code))
+		if t != "" {
+			out = append(out, CodeLine{Text: t, Number: i + 1})
+		}
+	}
+	return out
+}
+
+func lineCommentIndex(line string, markers []string) int {
+	best := -1
+	for _, m := range markers {
+		if idx := strings.Index(line, m); idx >= 0 && (best < 0 || idx < best) {
+			best = idx
+		}
+	}
+	return best
+}
+
 func beforeToken(line, token string) string {
 	idx := strings.Index(line, token)
 	if idx < 0 {
