@@ -173,12 +173,6 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Slice(largest, func(i, j int) bool { return largest[i].LinesCode > largest[j].LinesCode })
 	sort.Slice(mostComplex, func(i, j int) bool { return mostComplex[i].Complexity > mostComplex[j].Complexity })
-	top := func(in []models.File, n int) []models.File {
-		if len(in) < n {
-			n = len(in)
-		}
-		return in[:n]
-	}
 
 	if largest == nil {
 		largest = []models.File{}
