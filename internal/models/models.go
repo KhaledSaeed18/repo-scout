@@ -80,7 +80,7 @@ type File struct {
 type Commit struct {
 	ID           uint      `gorm:"primaryKey" json:"id"`
 	RepoID       uint      `gorm:"index:idx_commit_repo_hash,unique;index:idx_commit_repo_author;index:idx_commit_repo_date" json:"repoId"`
-	Hash         string    `json:"hash"`
+	Hash         string    `gorm:"index:idx_commit_repo_hash,unique" json:"hash"`
 	Author       string    `json:"author"`
 	Email        string    `json:"email"`
 	Date         time.Time `json:"date"`
@@ -113,7 +113,7 @@ type Contributor struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
 	RepoID        uint      `gorm:"index:idx_contrib_repo_email,unique" json:"repoId"`
 	Name          string    `json:"name"`
-	Email         string    `json:"email"`
+	Email         string    `gorm:"index:idx_contrib_repo_email,unique" json:"email"`
 	Commits       int       `json:"commits"`
 	Insertions    int       `json:"insertions"`
 	Deletions     int       `json:"deletions"`
