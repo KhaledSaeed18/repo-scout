@@ -206,6 +206,62 @@ func (s *Server) handleContributors(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"contributors": rows})
 }
 
+// handleLargestCommits returns the heaviest commits by total lines changed.
+func (s *Server) handleLargestCommits(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	commits, err := gitanalytics.LargestCommits(s.db, id, queryInt(r, "limit", 20, 200))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "largest commits: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"commits": commits})
+}
+
+// handleOwnership returns per-author file ownership.
+func (s *Server) handleOwnership(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	ownership, err := gitanalytics.ComputeOwnership(s.db, id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "ownership: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, ownership)
+}
+
+// handleBranches returns the branches for a repository.
+func (s *Server) handleBranches(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	var branches []models.Branch
+	if err := s.db.Where("repo_id = ?", id).Order("name ASC").Find(&branches).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "list branches: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"branches": branches})
+}
+
+// handleTags returns the tags for a repository.
+func (s *Server) handleTags(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	var tags []models.Tag
+	if err := s.db.Where("repo_id = ?", id).Order("name ASC").Find(&tags).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "list tags: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"tags": tags})
+}
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body: "+err.Error())
