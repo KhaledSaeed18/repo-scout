@@ -109,6 +109,32 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 	return report, nil
 }
 
+// ReportFromGraph recomputes a Report from stored edges and the repository
+// file list, without re-reading file contents. It is used by the API layer to
+// serve architecture data on demand.
+func ReportFromGraph(edges []Edge, files []models.File) Report {
+	fileSet := map[string]bool{}
+	dirSet := map[string]bool{}
+	for _, f := range files {
+		fileSet[f.Path] = true
+		dirSet[folderOf(f.Path)] = true
+	}
+	report := Report{Edges: edges}
+	fileToFiles := map[string][]string{}
+	for _, e := range edges {
+		fileToFiles[e.From] = append(fileToFiles[e.From], e.To)
+	}
+	report.EntryPoints = entryPoints(fileSet)
+	report.DeadFiles = deadFiles(fileSet, dirSet, report.EntryPoints, fileToFiles)
+	report.Folders = sortedKeys(dirSet)
+	folderGraph := buildFolderGraph(edges, dirSet)
+	report.Cycles = tarjanCycles(folderGraph)
+	report.UnusedModules = unusedModules(dirSet, folderGraph, report.EntryPoints)
+	sort.Strings(report.DeadFiles)
+	sort.Strings(report.UnusedModules)
+	return report
+}
+
 func moduleFromGoMod(content string) string {
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
