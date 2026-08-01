@@ -1,5 +1,21 @@
 import { useState } from 'react'
-import { Badge, Card, Empty, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import {
+  Badge,
+  Card,
+  Empty,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useFiles, useRepo, useTree } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -27,10 +43,15 @@ function FileTable({ repoId }: { repoId: number }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 text-sm text-slate-400">
         <span>Sort by</span>
-        <Select value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="loc">Code lines</option>
-          <option value="complexity">Complexity</option>
-          <option value="name">Name</option>
+        <Select value={sort} onValueChange={(val) => val && setSort(val)}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="loc">Code lines</SelectItem>
+            <SelectItem value="complexity">Complexity</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+          </SelectContent>
         </Select>
         <span className="ml-auto">{data?.total} files</span>
       </div>
@@ -162,9 +183,14 @@ function FilesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{repo?.name ?? ''} · Files</h1>
         <div className="flex items-center gap-2">
-          <Select value={view} onChange={(e) => setView(e.target.value as 'tree' | 'table')}>
-            <option value="tree">Tree</option>
-            <option value="table">Table</option>
+          <Select value={view} onValueChange={(val) => setView(val as 'tree' | 'table')}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tree">Tree</SelectItem>
+              <SelectItem value="table">Table</SelectItem>
+            </SelectContent>
           </Select>
           <RepoSelector />
         </div>

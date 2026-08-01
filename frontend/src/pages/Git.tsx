@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Empty, Spinner, Tabs, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { Card, Empty, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 import RepoSelector from '../components/RepoSelector'
@@ -389,24 +389,22 @@ function GitInner() {
         <h1 className="text-xl font-semibold">{repo?.name ?? ''} · Git</h1>
         <RepoSelector />
       </div>
-      <Tabs
-        tabs={[
-          { id: 'activity', label: 'Activity' },
-          { id: 'commits', label: 'Commits' },
-          { id: 'largest', label: 'Largest' },
-          { id: 'contributors', label: 'Contributors' },
-          { id: 'ownership', label: 'Ownership' },
-          { id: 'branches-tags', label: 'Branches & Tags' },
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
-      {tab === 'activity' && <ActivityTab repoId={repoId} />}
-      {tab === 'commits' && <CommitsView repoId={repoId} />}
-      {tab === 'largest' && <LargestCommitsView repoId={repoId} />}
-      {tab === 'contributors' && <ContributorsTab repoId={repoId} />}
-      {tab === 'ownership' && <OwnershipView repoId={repoId} />}
-      {tab === 'branches-tags' && <BranchesTagsView repoId={repoId} />}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="commits">Commits</TabsTrigger>
+          <TabsTrigger value="largest">Largest</TabsTrigger>
+          <TabsTrigger value="contributors">Contributors</TabsTrigger>
+          <TabsTrigger value="ownership">Ownership</TabsTrigger>
+          <TabsTrigger value="branches-tags">Branches & Tags</TabsTrigger>
+        </TabsList>
+        <TabsContent value="activity"><ActivityTab repoId={repoId} /></TabsContent>
+        <TabsContent value="commits"><CommitsView repoId={repoId} /></TabsContent>
+        <TabsContent value="largest"><LargestCommitsView repoId={repoId} /></TabsContent>
+        <TabsContent value="contributors"><ContributorsTab repoId={repoId} /></TabsContent>
+        <TabsContent value="ownership"><OwnershipView repoId={repoId} /></TabsContent>
+        <TabsContent value="branches-tags"><BranchesTagsView repoId={repoId} /></TabsContent>
+      </Tabs>
     </div>
   )
 }

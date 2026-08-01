@@ -1,5 +1,17 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Empty, Input, Select, Spinner } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+} from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -53,12 +65,17 @@ function SearchPage() {
               placeholder="Search term or pattern"
               className="w-72"
             />
-            <Select value={mode} onChange={(e) => setMode(e.target.value)}>
-              {modes.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
+            <Select value={mode} onValueChange={(val) => val && setMode(val)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {modes.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             <label className="flex items-center gap-1 text-sm text-slate-400">
               <input type="checkbox" checked={caseSensitive} onChange={(e) => setCaseSensitive(e.target.checked)} />
