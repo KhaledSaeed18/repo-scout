@@ -8,6 +8,8 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+mkdir -p "$ROOT/bin"
+
 echo "[dev] building backend"
 go build -o "$ROOT/bin/api" ./cmd/api
 BACKEND_PID=""
