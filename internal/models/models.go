@@ -52,7 +52,7 @@ type Repository struct {
 type File struct {
 	ID            uint       `gorm:"primaryKey" json:"id"`
 	RepoID        uint       `gorm:"index:idx_file_repo_path,unique;index:idx_file_repo_folder;index:idx_file_repo_lang;index:idx_file_repo_ext;index:idx_file_repo_author" json:"repoId"`
-	Path          string     `json:"path"`
+	Path          string     `gorm:"index:idx_file_repo_path,unique" json:"path"`
 	Name          string     `json:"name"`
 	Folder        string     `json:"folder"`
 	Extension     string     `json:"extension"`
