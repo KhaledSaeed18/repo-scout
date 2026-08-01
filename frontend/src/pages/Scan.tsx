@@ -1,5 +1,19 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Empty, Input, Progress, Spinner, Table } from '../components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Input,
+  Progress,
+  Spinner,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui'
 import { api, useCreateRepo, useJobs } from '../lib/api'
 import { RepoProvider } from '../lib/repoctx'
 import type { Job } from '../lib/types'
@@ -43,23 +57,31 @@ function JobRow({ job }: { job: Job }) {
         {a}
       </Button>
     ))
-  return [
-    <span key="id">#{job.id}</span>,
-    <span key="repo">{job.repoId}</span>,
-    <span key="kind">{job.kind}</span>,
-    <Badge key="status" className={statusColor(job.status)}>
-      {job.status}
-    </Badge>,
-    <div key="progress" className="w-40">
-      <Progress value={job.progress} />
-    </div>,
-    <span key="msg" className="block max-w-56 truncate text-xs text-slate-400">
-      {job.message}
-    </span>,
-    <div key="actions" className="flex gap-1">
-      {buttons}
-    </div>,
-  ]
+  return (
+    <TableRow key={job.id}>
+      <TableCell>#{job.id}</TableCell>
+      <TableCell>{job.repoId}</TableCell>
+      <TableCell>{job.kind}</TableCell>
+      <TableCell>
+        <Badge className={statusColor(job.status)}>
+          {job.status}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div className="w-40">
+          <Progress value={Math.round(job.progress * 100)} />
+        </div>
+      </TableCell>
+      <TableCell className="block max-w-56 truncate text-xs text-slate-400">
+        {job.message}
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          {buttons}
+        </div>
+      </TableCell>
+    </TableRow>
+  )
 }
 
 function ScanPage() {
@@ -99,17 +121,35 @@ function ScanPage() {
         </form>
       </Card>
 
-      <Card>
-        <h2 className="mb-3 text-sm font-medium text-slate-300">Jobs</h2>
+      <Card className="overflow-hidden">
+        <h2 className="mb-3 text-sm font-medium text-slate-300 px-6 pt-6">Jobs</h2>
         {isLoading ? (
-          <Spinner />
+          <div className="px-6 py-4">
+            <Spinner />
+          </div>
         ) : jobs.length === 0 ? (
-          <Empty message="No jobs yet" />
+          <div className="px-6 py-4">
+            <Empty message="No jobs yet" />
+          </div>
         ) : (
-          <Table
-            headers={['ID', 'Repo', 'Kind', 'Status', 'Progress', 'Message', 'Actions']}
-            rows={jobs.map((j) => JobRow({ job: j }))}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Repo</TableHead>
+                  <TableHead>Kind</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {jobs.map((j) => JobRow({ job: j }))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
     </div>

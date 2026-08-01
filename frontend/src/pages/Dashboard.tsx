@@ -16,7 +16,12 @@ import {
   Spinner,
   Stat,
   Table,
-} from '../components/ui'
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useDeleteRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -172,25 +177,42 @@ function DashboardInner() {
         </>
       )}
 
-      <Card>
-        <h2 className="mb-3 text-sm font-medium text-slate-300">Repositories</h2>
-        <Table
-          headers={['Name', 'Status', 'Files', 'LOC', 'Commits', 'Path']}
-          rows={repos.repositories.map((r) => [
-            <Link key={r.id} to={`/files?repo=${r.id}`} className="text-sky-400">
-              {r.name}
-            </Link>,
-            <Badge key="s" className={statusColor(r.status)}>
-              {r.status}
-            </Badge>,
-            r.fileCount,
-            r.totalCode.toLocaleString(),
-            r.commitCount,
-            <span key="p" className="text-xs text-slate-500">
-              {r.path}
-            </span>,
-          ])}
-        />
+      <Card className="overflow-hidden">
+        <h2 className="mb-3 text-sm font-medium text-slate-300 px-6 pt-6">Repositories</h2>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Files</TableHead>
+                <TableHead>LOC</TableHead>
+                <TableHead>Commits</TableHead>
+                <TableHead>Path</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {repos.repositories.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <Link to={`/files?repo=${r.id}`} className="text-sky-400">
+                      {r.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={statusColor(r.status)}>
+                      {r.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{r.fileCount}</TableCell>
+                  <TableCell>{r.totalCode.toLocaleString()}</TableCell>
+                  <TableCell>{r.commitCount}</TableCell>
+                  <TableCell className="text-xs text-slate-500">{r.path}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
     </div>
   )

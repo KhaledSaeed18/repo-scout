@@ -7,7 +7,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Empty, Spinner, Stat, Table } from '../components/ui'
+import { Card, Empty, Spinner, Stat, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useMetrics, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -74,17 +74,42 @@ function MetricsPage() {
         </Card>
         <Card className="flex flex-col gap-3">
           <h3 className="text-sm font-medium text-slate-300">Aggregates</h3>
-          <Table
-            headers={['Metric', 'Value']}
-            rows={[
-              ['Comments', data.totals.comments],
-              ['Blank lines', data.totals.blank],
-              ['Imports', data.totals.imports],
-              ['Exports', data.totals.exports],
-              ['Deepest folder depth', data.maxDepth],
-              ['Deepest file', <span key="d" className="break-all text-xs">{data.deepestFile || '—'}</span>],
-            ]}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Metric</TableHead>
+                  <TableHead>Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow key="comments">
+                  <TableCell>Comments</TableCell>
+                  <TableCell>{data.totals.comments}</TableCell>
+                </TableRow>
+                <TableRow key="blank-lines">
+                  <TableCell>Blank lines</TableCell>
+                  <TableCell>{data.totals.blank}</TableCell>
+                </TableRow>
+                <TableRow key="imports">
+                  <TableCell>Imports</TableCell>
+                  <TableCell>{data.totals.imports}</TableCell>
+                </TableRow>
+                <TableRow key="exports">
+                  <TableCell>Exports</TableCell>
+                  <TableCell>{data.totals.exports}</TableCell>
+                </TableRow>
+                <TableRow key="max-depth">
+                  <TableCell>Deepest folder depth</TableCell>
+                  <TableCell>{data.maxDepth}</TableCell>
+                </TableRow>
+                <TableRow key="deepest-file">
+                  <TableCell>Deepest file</TableCell>
+                  <TableCell><span className="break-all text-xs">{data.deepestFile || '—'}</span></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       </div>
       <Card>
@@ -92,17 +117,28 @@ function MetricsPage() {
         {(data.largestFiles ?? []).length === 0 ? (
           <Empty message="No files" />
         ) : (
-          <Table
-            headers={['File', 'Code lines', 'Complexity', 'Functions']}
-            rows={data.largestFiles.map((f) => [
-              <span key="p" className="text-sky-400">
-                {f.path}
-              </span>,
-              f.linesCode,
-              f.complexity,
-              f.funcCount,
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>File</TableHead>
+                  <TableHead>Code lines</TableHead>
+                  <TableHead>Complexity</TableHead>
+                  <TableHead>Functions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.largestFiles.map((f) => (
+                  <TableRow key={f.path}>
+                    <TableCell><span className="text-sky-400">{f.path}</span></TableCell>
+                    <TableCell>{f.linesCode}</TableCell>
+                    <TableCell>{f.complexity}</TableCell>
+                    <TableCell>{f.funcCount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
       <Card>
@@ -110,17 +146,28 @@ function MetricsPage() {
         {(data.mostComplexFiles ?? []).length === 0 ? (
           <Empty message="No files" />
         ) : (
-          <Table
-            headers={['File', 'Complexity', 'Functions', 'Max nesting']}
-            rows={data.mostComplexFiles.map((f) => [
-              <span key="p" className="text-sky-400">
-                {f.path}
-              </span>,
-              f.complexity,
-              f.funcCount,
-              f.maxNesting,
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>File</TableHead>
+                  <TableHead>Complexity</TableHead>
+                  <TableHead>Functions</TableHead>
+                  <TableHead>Max nesting</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.mostComplexFiles.map((f) => (
+                  <TableRow key={f.path}>
+                    <TableCell><span className="text-sky-400">{f.path}</span></TableCell>
+                    <TableCell>{f.complexity}</TableCell>
+                    <TableCell>{f.funcCount}</TableCell>
+                    <TableCell>{f.maxNesting}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
     </div>

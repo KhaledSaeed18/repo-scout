@@ -6,7 +6,7 @@ import ReactFlow, {
   type Node,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Button, Card, Empty, Spinner, Table } from '../components/ui'
+import { Button, Card, Empty, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useArchitecture, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -115,43 +115,69 @@ function ArchitecturePage() {
               <h3 className="mb-3 text-sm font-medium text-slate-300">
                 Graph summary
               </h3>
-              <Table
-                headers={['Measure', 'Value']}
-                rows={[
-                  ['Nodes', nodeCount],
-                  ['Edges', edges],
-                  ['Entry points', (data.entryPoints ?? []).length],
-                  ['Dead files', (data.deadFiles ?? []).length],
-                  ['Unused modules', (data.unusedModules ?? []).length],
-                  ['Cycles', (data.cycles ?? []).length],
-                ]}
-              />
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Measure</TableHead>
+                      <TableHead>Value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow key="nodes">
+                      <TableCell>Nodes</TableCell>
+                      <TableCell>{nodeCount}</TableCell>
+                    </TableRow>
+                    <TableRow key="edges">
+                      <TableCell>Edges</TableCell>
+                      <TableCell>{edges}</TableCell>
+                    </TableRow>
+                    <TableRow key="entry-points">
+                      <TableCell>Entry points</TableCell>
+                      <TableCell>{(data.entryPoints ?? []).length}</TableCell>
+                    </TableRow>
+                    <TableRow key="dead-files">
+                      <TableCell>Dead files</TableCell>
+                      <TableCell>{(data.deadFiles ?? []).length}</TableCell>
+                    </TableRow>
+                    <TableRow key="unused-modules">
+                      <TableCell>Unused modules</TableCell>
+                      <TableCell>{(data.unusedModules ?? []).length}</TableCell>
+                    </TableRow>
+                    <TableRow key="cycles">
+                      <TableCell>Cycles</TableCell>
+                      <TableCell>{(data.cycles ?? []).length}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
             <Card>
               <h3 className="mb-3 text-sm font-medium text-slate-300">Issues</h3>
-              <Table
-                headers={['Type', 'Items']}
-                rows={[
-                  [
-                    'Cycles',
-                    (data.cycles ?? []).length
-                      ? data.cycles.map((c) => c.join(' → ')).join(' | ')
-                      : 'none',
-                  ],
-                  [
-                    'Dead files',
-                    (data.deadFiles ?? []).length
-                      ? data.deadFiles.slice(0, 15).join(', ')
-                      : 'none',
-                  ],
-                  [
-                    'Unused modules',
-                    (data.unusedModules ?? []).length
-                      ? data.unusedModules.slice(0, 15).join(', ')
-                      : 'none',
-                  ],
-                ]}
-              />
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Items</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow key="cycles-row">
+                      <TableCell>Cycles</TableCell>
+                      <TableCell>{(data.cycles ?? []).length ? data.cycles.map((c) => c.join(' → ')).join(' | ') : 'none'}</TableCell>
+                    </TableRow>
+                    <TableRow key="dead-files-row">
+                      <TableCell>Dead files</TableCell>
+                      <TableCell>{(data.deadFiles ?? []).length ? data.deadFiles.slice(0, 15).join(', ') : 'none'}</TableCell>
+                    </TableRow>
+                    <TableRow key="unused-modules-row">
+                      <TableCell>Unused modules</TableCell>
+                      <TableCell>{(data.unusedModules ?? []).length ? data.unusedModules.slice(0, 15).join(', ') : 'none'}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </div>
         </>

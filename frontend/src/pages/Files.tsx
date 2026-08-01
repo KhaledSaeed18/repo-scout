@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Card, Empty, Select, Spinner, Table } from '../components/ui'
+import { Badge, Card, Empty, Select, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useFiles, useRepo, useTree } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -34,28 +34,38 @@ function FileTable({ repoId }: { repoId: number }) {
         </Select>
         <span className="ml-auto">{data?.total} files</span>
       </div>
-      <Table
-        headers={['Path', 'Language', 'Lines', 'Code', 'Complexity', 'Funcs', 'Max len', 'Author', 'Commits']}
-        rows={files.map((f) => [
-          f.path,
-          f.language ? (
-            <Badge key="l" className={langColor(f.language)}>
-              {f.language}
-            </Badge>
-          ) : (
-            ''
-          ),
-          f.linesTotal,
-          f.linesCode,
-          f.complexity,
-          f.funcCount,
-          f.maxFuncLen,
-          <span key="a" className="text-xs text-slate-400">
-            {f.author || '—'}
-          </span>,
-          f.commits,
-        ])}
-      />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Path</TableHead>
+              <TableHead>Language</TableHead>
+              <TableHead>Lines</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Complexity</TableHead>
+              <TableHead>Funcs</TableHead>
+              <TableHead>Max len</TableHead>
+              <TableHead>Author</TableHead>
+              <TableHead>Commits</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {files.map((f) => (
+              <TableRow key={f.path}>
+                <TableCell>{f.path}</TableCell>
+                <TableCell>{f.language ? <Badge className={langColor(f.language)}>{f.language}</Badge> : ''}</TableCell>
+                <TableCell>{f.linesTotal}</TableCell>
+                <TableCell>{f.linesCode}</TableCell>
+                <TableCell>{f.complexity}</TableCell>
+                <TableCell>{f.funcCount}</TableCell>
+                <TableCell>{f.maxFuncLen}</TableCell>
+                <TableCell><span className="text-xs text-slate-400">{f.author || '—'}</span></TableCell>
+                <TableCell>{f.commits}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

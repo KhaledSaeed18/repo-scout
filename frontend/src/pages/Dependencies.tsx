@@ -1,4 +1,4 @@
-import { Badge, Card, Empty, Spinner, Table } from '../components/ui'
+import { Badge, Card, Empty, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useDependencies, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -36,19 +36,30 @@ function DependenciesPage() {
         ))}
       </div>
       {managers.map((m) => (
-        <Card key={m} className="flex flex-col gap-3">
+        <Card key={m} className="flex flex-col gap-3 overflow-hidden">
           <h2 className="text-sm font-medium text-slate-300">{m}</h2>
-          <Table
-            headers={['Package', 'Version', 'Scope', 'Manifest']}
-            rows={deps[m].map((d) => [
-              d.name,
-              d.version,
-              d.scope || '—',
-              <span key="f" className="text-xs text-slate-500">
-                {d.filePath}
-              </span>,
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Package</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Manifest</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deps[m].map((d) => (
+                  <TableRow key={d.name + d.version}>
+                    <TableCell>{d.name}</TableCell>
+                    <TableCell>{d.version}</TableCell>
+                    <TableCell>{d.scope || '—'}</TableCell>
+                    <TableCell><span className="text-xs text-slate-500">{d.filePath}</span></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       ))}
     </div>

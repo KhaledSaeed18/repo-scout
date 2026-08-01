@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Button, Card, Empty, Input, Select, Spinner } from '../components/ui'
+import { Badge, Button, Card, Empty, Input, Select, Spinner } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'

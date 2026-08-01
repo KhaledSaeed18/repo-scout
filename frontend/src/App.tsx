@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useLiveUpdates } from './lib/ws'
-import { cn } from './components/ui'
+import { cn } from '@/lib/utils'
 
 const nav = [
   { to: '/', label: 'Dashboard' },

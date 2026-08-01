@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Empty, Spinner, Table, Tabs } from '../components/ui'
+import { Card, Empty, Spinner, Tabs, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 import RepoSelector from '../components/RepoSelector'
@@ -91,16 +91,30 @@ function StreaksView({ streaks }: { streaks: import('../lib/types').StreaksResul
   return (
     <Card>
       <h3 className="mb-3 text-sm font-medium text-slate-300">Streaks</h3>
-      <Table
-        headers={['Author', 'Total commits', 'Active days', 'Longest streak', 'Current streak']}
-        rows={streaks.map((s) => [
-          s.email,
-          s.totalCommits,
-          s.activeDays,
-          `${s.longest.start} · ${s.longest.days}d`,
-          s.current.days > 0 ? `${s.current.start} · ${s.current.days}d` : '—',
-        ])}
-      />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Author</TableHead>
+              <TableHead>Total commits</TableHead>
+              <TableHead>Active days</TableHead>
+              <TableHead>Longest streak</TableHead>
+              <TableHead>Current streak</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {streaks.map((s) => (
+              <TableRow key={s.email}>
+                <TableCell>{s.email}</TableCell>
+                <TableCell>{s.totalCommits}</TableCell>
+                <TableCell>{s.activeDays}</TableCell>
+                <TableCell>{`${s.longest.start} · ${s.longest.days}d`}</TableCell>
+                <TableCell>{s.current.days > 0 ? `${s.current.start} · ${s.current.days}d` : '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </Card>
   )
 }
@@ -143,31 +157,36 @@ function CommitsView({ repoId }: { repoId: number }) {
   const commits = data?.commits ?? []
   if (!commits.length) return <Empty message="No commits" />
   return (
-    <Table
-      headers={['Hash', 'Author', 'Date', 'Message', 'Files', '+', '−', 'Merge']}
-      rows={commits.map((c) => [
-        <code key="h" className="text-xs text-sky-400">
-          {c.hash.slice(0, 8)}
-        </code>,
-        c.author,
-        new Date(c.date).toLocaleDateString(),
-        <span key="m" className="max-w-96 truncate">
-          {c.message}
-        </span>,
-        c.filesChanged,
-        <span key="i" className="text-emerald-400">
-          +{c.insertions}
-        </span>,
-        <span key="d" className="text-rose-400">
-          −{c.deletions}
-        </span>,
-        c.isMerge ? (
-          <span key="m" className="text-amber-400 text-xs">✓</span>
-        ) : (
-          ''
-        ),
-      ])}
-    />
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Hash</TableHead>
+            <TableHead>Author</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Message</TableHead>
+            <TableHead>Files</TableHead>
+            <TableHead>+</TableHead>
+            <TableHead>−</TableHead>
+            <TableHead>Merge</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {commits.map((c) => (
+            <TableRow key={c.hash}>
+              <TableCell><code className="text-xs text-sky-400">{c.hash.slice(0, 8)}</code></TableCell>
+              <TableCell>{c.author}</TableCell>
+              <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
+              <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
+              <TableCell>{c.filesChanged}</TableCell>
+              <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
+              <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
+              <TableCell>{c.isMerge ? <span className="text-amber-400 text-xs">✓</span> : ''}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -177,26 +196,34 @@ function LargestCommitsView({ repoId }: { repoId: number }) {
   const commits = data?.commits ?? []
   if (!commits.length) return <Empty message="No commits" />
   return (
-    <Table
-      headers={['Hash', 'Author', 'Date', 'Message', 'Files', '+', '−']}
-      rows={commits.map((c) => [
-        <code key="h" className="text-xs text-sky-400">
-          {c.hash.slice(0, 8)}
-        </code>,
-        c.author,
-        new Date(c.date).toLocaleDateString(),
-        <span key="m" className="max-w-96 truncate">
-          {c.message}
-        </span>,
-        c.filesChanged,
-        <span key="i" className="text-emerald-400">
-          +{c.insertions}
-        </span>,
-        <span key="d" className="text-rose-400">
-          −{c.deletions}
-        </span>,
-      ])}
-    />
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Hash</TableHead>
+            <TableHead>Author</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Message</TableHead>
+            <TableHead>Files</TableHead>
+            <TableHead>+</TableHead>
+            <TableHead>−</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {commits.map((c) => (
+            <TableRow key={c.hash}>
+              <TableCell><code className="text-xs text-sky-400">{c.hash.slice(0, 8)}</code></TableCell>
+              <TableCell>{c.author}</TableCell>
+              <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
+              <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
+              <TableCell>{c.filesChanged}</TableCell>
+              <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
+              <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -210,14 +237,26 @@ function OwnershipView({ repoId }: { repoId: number }) {
       <h3 className="mb-3 text-sm font-medium text-slate-300">
         File ownership ({ownership.length} authors, {data?.total} files)
       </h3>
-      <Table
-        headers={['Author', 'Files', 'Share']}
-        rows={ownership.map((o) => [
-          o.author,
-          o.files,
-          `${(o.share * 100).toFixed(1)}%`,
-        ])}
-      />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Author</TableHead>
+              <TableHead>Files</TableHead>
+              <TableHead>Share</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ownership.map((o) => (
+              <TableRow key={o.author}>
+                <TableCell>{o.author}</TableCell>
+                <TableCell>{o.files}</TableCell>
+                <TableCell>{`${(o.share * 100).toFixed(1)}%`}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </Card>
   )
 }
@@ -235,22 +274,26 @@ function BranchesTagsView({ repoId }: { repoId: number }) {
         {branches.length === 0 ? (
           <Empty message="No branches" />
         ) : (
-          <Table
-            headers={['Name', 'Commit', 'Current']}
-            rows={branches.map((b) => [
-              <span key="n" className={b.isCurrent ? 'text-sky-400 font-medium' : ''}>
-                {b.name}
-              </span>,
-              <code key="h" className="text-xs text-slate-500">
-                {b.commitHash.slice(0, 8)}
-              </code>,
-              b.isCurrent ? (
-                <span key="c" className="text-emerald-400 text-xs">HEAD</span>
-              ) : (
-                ''
-              ),
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Commit</TableHead>
+                  <TableHead>Current</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {branches.map((b) => (
+                  <TableRow key={b.name}>
+                    <TableCell><span className={b.isCurrent ? 'text-sky-400 font-medium' : ''}>{b.name}</span></TableCell>
+                    <TableCell><code className="text-xs text-slate-500">{b.commitHash.slice(0, 8)}</code></TableCell>
+                    <TableCell>{b.isCurrent ? <span className="text-emerald-400 text-xs">HEAD</span> : ''}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
       <Card>
@@ -258,15 +301,24 @@ function BranchesTagsView({ repoId }: { repoId: number }) {
         {tags.length === 0 ? (
           <Empty message="No tags" />
         ) : (
-          <Table
-            headers={['Name', 'Commit']}
-            rows={tags.map((t) => [
-              t.name,
-              <code key="h" className="text-xs text-slate-500">
-                {t.commitHash.slice(0, 8)}
-              </code>,
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Commit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tags.map((t) => (
+                  <TableRow key={t.name}>
+                    <TableCell>{t.name}</TableCell>
+                    <TableCell><code className="text-xs text-slate-500">{t.commitHash.slice(0, 8)}</code></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
     </div>
@@ -296,21 +348,32 @@ function ContributorsTab({ repoId }: { repoId: number }) {
   return (
     <div className="flex flex-col gap-4">
       <ContributorsChart contributors={contributors} />
-      <Table
-        headers={['Name', 'Email', 'Commits', 'Insertions', 'Deletions', 'First commit']}
-        rows={contributors.map((c) => [
-          c.name,
-          c.email,
-          c.commits,
-          <span key="i" className="text-emerald-400">
-            +{c.insertions}
-          </span>,
-          <span key="d" className="text-rose-400">
-            −{c.deletions}
-          </span>,
-          new Date(c.firstCommitAt).toLocaleDateString(),
-        ])}
-      />
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Commits</TableHead>
+              <TableHead>Insertions</TableHead>
+              <TableHead>Deletions</TableHead>
+              <TableHead>First commit</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {contributors.map((c) => (
+              <TableRow key={c.email}>
+                <TableCell>{c.name}</TableCell>
+                <TableCell>{c.email}</TableCell>
+                <TableCell>{c.commits}</TableCell>
+                <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
+                <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
+                <TableCell>{new Date(c.firstCommitAt).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   )
 }

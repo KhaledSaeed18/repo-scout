@@ -1,4 +1,4 @@
-import { Badge, Card, Empty, Spinner, Table } from '../components/ui'
+import { Badge, Card, Empty, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useDuplicates, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -19,7 +19,7 @@ function DuplicatesPage() {
         <RepoSelector />
       </div>
       {groups.map((g) => (
-        <Card key={g.id} className="flex flex-col gap-3">
+        <Card key={g.id} className="flex flex-col gap-3 overflow-hidden">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-sky-800 bg-sky-500/20 text-sky-300">
               {g.lines} lines
@@ -32,16 +32,26 @@ function DuplicatesPage() {
           <pre className="overflow-x-auto rounded border border-slate-800 bg-slate-950 p-3 text-xs text-slate-300">
             {g.fragment}
           </pre>
-          <Table
-            headers={['File', 'Start', 'End']}
-            rows={g.blocks.map((b) => [
-              <span key="p" className="text-sky-400">
-                {b.filePath}
-              </span>,
-              b.startLine,
-              b.endLine,
-            ])}
-          />
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>File</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead>End</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {g.blocks.map((b) => (
+                  <TableRow key={b.filePath + b.startLine}>
+                    <TableCell><span className="text-sky-400">{b.filePath}</span></TableCell>
+                    <TableCell>{b.startLine}</TableCell>
+                    <TableCell>{b.endLine}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       ))}
     </div>

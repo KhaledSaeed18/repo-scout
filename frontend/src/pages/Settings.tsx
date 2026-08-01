@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Input, Spinner } from '../components/ui'
+import { Button, Card, Input, Spinner } from '@/components/ui'
 import { useSaveSettings, useSettings } from '../lib/api'
 import { RepoProvider } from '../lib/repoctx'
 import type { Settings as SettingsType } from '../lib/types'
