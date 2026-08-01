@@ -271,12 +271,12 @@ func braceClose(lines []string, start int) int {
 
 func init() {
 	add("Go", &langConfig{
-		importFn: countGoImports,
-		exportRe: mustCompile(`(?m)^\s*(?:func|var|const|type)\s+[A-Z]`),
+		importFn:  countGoImports,
+		exportRe:  mustCompile(`(?m)^\s*(?:func|var|const|type)\s+[A-Z]`),
 		funcStart: []*regexp.Regexp{mustCompile(`(?m)^\s*func\s`)},
 		decisions: cFamilyDecisions(),
-		lineRe:   mustCompile(`//.*`),
-		blockRe:  mustCompile(`/\*.*?\*/`),
+		lineRe:    mustCompile(`//.*`),
+		blockRe:   mustCompile(`/\*.*?\*/`),
 	})
 	add("Rust", &langConfig{
 		importRe:  mustCompile(`\buse\b`),
