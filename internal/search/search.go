@@ -71,6 +71,58 @@ type Store struct {
 // New builds a search Store.
 func New(db *gorm.DB) *Store { return &Store{db: db} }
 
+// Reindex populates the FTS5 content index for a repository from its scanned
+// files. It batches inserts in transactions to stay fast on large repos.
+func (s *Store) Reindex(ctx context.Context, repoID uint, root string, files []models.File, read func(rel string) (string, error)) error {
+	if read == nil {
+		read = func(rel string) (string, error) {
+			data, err := os.ReadFile(filepath.Join(root, rel))
+			return string(data), err
+		}
+	}
+	const batch = 500
+	var rows []struct {
+		ID      uint
+		Path    string
+		Content string
+	}
+	flush := func() error {
+		if len(rows) == 0 {
+			return nil
+		}
+		return s.db.Transaction(func(tx *gorm.DB) error {
+			for _, r := range rows {
+				if err := tx.Exec("INSERT INTO file_fts (rowid, repo_id, path, content) VALUES (?, ?, ?, ?)",
+					r.ID, repoID, r.Path, r.Content).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	for _, f := range files {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		content, err := read(f.Path)
+		if err != nil {
+			continue
+		}
+		rows = append(rows, struct {
+			ID      uint
+			Path    string
+			Content string
+		}{ID: f.ID, Path: f.Path, Content: content})
+		if len(rows) >= batch {
+			if err := flush(); err != nil {
+				return err
+			}
+			rows = rows[:0]
+		}
+	}
+	return flush()
+}
+
 // Search runs a query against the given repository.
 func (s *Store) Search(ctx context.Context, q Query, settings config.Settings) (Result, error) {
 	if q.Limit <= 0 || q.Limit > 200 {
