@@ -17,7 +17,7 @@ BACKEND_PID=""
 BACKEND_PID=$!
 
 echo "[dev] starting frontend"
-npm --prefix "$ROOT/frontend" run dev &
+pnpm --prefix "$ROOT/frontend" run dev &
 FRONTEND_PID=$!
 
 wait

@@ -28,7 +28,7 @@ From the repository root:
 - `make lint` — go vet, golangci-lint (if present), frontend eslint.
 - `make build` — production builds for both halves.
 
-Frontend commands run with `npm --prefix frontend run ...`.
+Frontend commands run with `pnpm --prefix frontend run ...`.
 
 ## Layout
 
