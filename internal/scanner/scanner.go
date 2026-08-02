@@ -133,11 +133,12 @@ func (s *Scanner) Scan(ctx context.Context, repoID uint, root string, settings c
 		}()
 	}
 	go func() {
+	feed:
 		for _, p := range paths {
 			select {
 			case files <- p:
 			case <-ctx.Done():
-				break
+				break feed
 			}
 		}
 		close(files)
