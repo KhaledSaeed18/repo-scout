@@ -11,12 +11,6 @@ Repo Scout — a local-first Git repository analytics platform.
 - Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui + TanStack Query
   + React Flow + Recharts.
 
-## Reference documents (read before coding)
-
-- `docs/rules.md` — engineering and git rules. **Hard requirements.**
-- `docs/architecture.md` — system design, data model, pipeline, API surface.
-- `docs/roadmap.md` — phased delivery and acceptance checklist.
-
 ## Commands
 
 From the repository root:
@@ -52,7 +46,7 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
 - TypeScript: strict mode, shared types generated alongside the API contracts
   in `frontend/src/lib/types.ts`.
 
-## Git rules (abbreviated — full version in `docs/rules.md`)
+## Git rules
 
 - Micro-commits: one small self-contained unit per commit, committed
   immediately. Never batch unrelated changes.
