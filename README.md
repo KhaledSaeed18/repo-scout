@@ -6,7 +6,6 @@
   <img src="https://shieldcn.dev/badge/backend-Go%20%2B%20SQLite-cyan.svg?variant=secondary&logo=go&logoColor=ffffff" alt="Backend: Go + SQLite" />
   <img src="https://shieldcn.dev/badge/frontend-React%20%2B%20Vite-cyan.svg?variant=secondary&logo=react&logoColor=ffffff" alt="Frontend: React + Vite" />
   <img src="https://shieldcn.dev/badge/mode-local--first-cyan.svg?variant=secondary" alt="Mode: local-first" />
-  <a href="https://github.com/KhaledSaeed18/repo-scout/stargazers"><img src="https://shieldcn.dev/github/stars/KhaledSaeed18/repo-scout.svg" alt="GitHub stars" /></a>
 </p>
 
 <strong>Point it at a folder. See the whole codebase.</strong>
@@ -15,7 +14,7 @@
 
 Repo Scout scans any Git repository on disk and turns it into an interactive
 dashboard: architecture graphs, code quality metrics, dependency trees,
-commit history, contributor activity, and duplicate code — all computed
+commit history, contributor activity, and duplicate code, all computed
 locally and kept in a SQLite file next to it.
 
 There is no upload step and no account. You give it a path, it walks the
@@ -35,10 +34,10 @@ click through instead of a wall of terminal output.
   100k-file monorepo go through the same pipeline.
 - **You watch it work, not wait for it.** Every scan is a background job
   broadcasting progress over a WebSocket, with pause / resume / cancel and
-  crash recovery — not a frozen progress bar.
+  crash recovery, not a frozen progress bar.
 - **It tells you what's actually wrong.** Circular imports, dead files,
   unused modules, duplicated blocks with similarity scores, and complexity
-  hot spots — surfaced directly, not left for you to infer from a diagram.
+  hot spots, surfaced directly, not left for you to infer from a diagram.
 
 ## Features
 
@@ -68,21 +67,21 @@ click through instead of a wall of terminal output.
 A scan runs as a background job through ordered stages, each reporting
 progress over the WebSocket hub as it goes:
 
-1. **git metadata** — branches, tags, HEAD, remote, top-level commit stats
-2. **file scan** — walk the tree, apply ignore rules + size limits, count
+1. **git metadata**: branches, tags, HEAD, remote, top-level commit stats
+2. **file scan**: walk the tree, apply ignore rules + size limits, count
    LOC/language per file with a worker pool
-3. **git history** — commits, authors, contributor rollups, streaks, heatmap,
+3. **git history**: commits, authors, contributor rollups, streaks, heatmap,
    file ownership
-4. **dependencies** — parse manifests per language
-5. **import graph** — resolve imports, detect cycles (Tarjan SCC), flag
+4. **dependencies**: parse manifests per language
+5. **import graph**: resolve imports, detect cycles (Tarjan SCC), flag
    unused modules and dead files
-6. **metrics** — cyclomatic complexity, function length, nesting, largest /
+6. **metrics**: cyclomatic complexity, function length, nesting, largest /
    most complex files
-7. **duplicates** — shingle-hash normalized lines, cluster similar blocks
-8. **content index** — populate SQLite FTS5 for instant search
+7. **duplicates**: shingle-hash normalized lines, cluster similar blocks
+8. **content index**: populate SQLite FTS5 for instant search
 
 Jobs are queued, run through a configurable worker pool, and persist their
-state — pause, resume, and cancel all just mutate that state, and a crash
+state: pause, resume, and cancel all just mutate that state, and a crash
 mid-scan resumes cleanly instead of leaving a half-written repository behind.
 
 ## Requirements
@@ -102,12 +101,12 @@ Open http://localhost:5173. The API runs on http://localhost:8080.
 
 ## Commands
 
-- `make dev` — backend + frontend together
-- `make backend` — build/run the Go API only
-- `make frontend` — Vite dev server only
-- `make test` — Go tests + frontend typecheck/tests
-- `make lint` — go vet + golangci-lint (if present) + frontend eslint
-- `make build` — production builds
+- `make dev`: backend + frontend together
+- `make backend`: build/run the Go API only
+- `make frontend`: Vite dev server only
+- `make test`: Go tests + frontend typecheck/tests
+- `make lint`: go vet + golangci-lint (if present) + frontend eslint
+- `make build`: production builds
 
 ## Architecture
 
@@ -147,9 +146,3 @@ repo-scout/
 | Data fetching   | TanStack Query                                    |
 | Graphs          | React Flow                                        |
 | Charts          | Recharts                                          |
-
-## Documentation
-
-- [`docs/rules.md`](docs/rules.md) — engineering and git rules
-- [`docs/architecture.md`](docs/architecture.md) — full system design
-- [`docs/roadmap.md`](docs/roadmap.md) — delivery plan
