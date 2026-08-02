@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/KhaledSaeed18/repo-scout/internal/database"
 	"github.com/KhaledSaeed18/repo-scout/internal/gitanalytics"
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
+	"gorm.io/gorm"
 )
 
 type createRepoRequest struct {
@@ -73,7 +75,16 @@ func (s *Server) handleDeleteRepo(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.loadRepo(w, id); !ok {
 		return
 	}
-	if err := s.db.Delete(&models.Repository{}, id).Error; err != nil {
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := database.ClearRepoData(tx, id); err != nil {
+			return err
+		}
+		if err := tx.Where("repo_id = ?", id).Delete(&models.Job{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Repository{}, id).Error
+	})
+	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "delete repository: "+err.Error())
 		return
 	}

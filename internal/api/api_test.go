@@ -102,6 +102,22 @@ func get(t *testing.T, ts *httptest.Server, path string) (*http.Response, map[st
 	return resp, body
 }
 
+func del(t *testing.T, ts *httptest.Server, path string) (*http.Response, map[string]any) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var body map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&body)
+	return resp, body
+}
+
 func TestHealth(t *testing.T) {
 	ts, _ := newTestServer(t)
 	resp, _ := get(t, ts, "/api/health")
@@ -180,5 +196,42 @@ func TestRepositoryEndpoints(t *testing.T) {
 	resp, _ = get(t, ts, "/api/repositories/999")
 	if resp.StatusCode != 404 {
 		t.Fatalf("missing repo: expected 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestDeleteRepoCascades(t *testing.T) {
+	ts, srv := newTestServer(t)
+
+	if err := srv.db.Create(&models.Job{RepoID: 1, Kind: "scan", Status: "completed"}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	var fileCount int64
+	srv.db.Model(&models.File{}).Where("repo_id = ?", 1).Count(&fileCount)
+	if fileCount == 0 {
+		t.Fatal("expected seeded files for repo 1")
+	}
+
+	resp, body := del(t, ts, "/api/repositories/1")
+	if resp.StatusCode != 200 || body["deleted"] != true {
+		t.Fatalf("delete repo: %d %v", resp.StatusCode, body)
+	}
+
+	resp, _ = get(t, ts, "/api/repositories/1")
+	if resp.StatusCode != 404 {
+		t.Fatalf("expected repo gone, got %d", resp.StatusCode)
+	}
+
+	for _, tbl := range []any{
+		&models.File{}, &models.Commit{}, &models.Branch{}, &models.Tag{},
+		&models.Contributor{}, &models.Job{},
+	} {
+		var n int64
+		if err := srv.db.Model(tbl).Where("repo_id = ?", 1).Count(&n).Error; err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Fatalf("expected no %T rows for deleted repo, got %d", tbl, n)
+		}
 	}
 }
