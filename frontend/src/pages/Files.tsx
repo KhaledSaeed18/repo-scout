@@ -1,8 +1,10 @@
+import { FileCode2, FolderGit2 } from 'lucide-react'
 import { useState } from 'react'
 import {
   Badge,
   Card,
-  Empty,
+  CardContent,
+  EmptyState,
   Select,
   SelectContent,
   SelectItem,
@@ -20,17 +22,26 @@ import RepoSelector from '../components/RepoSelector'
 import { useFiles, useRepo, useTree } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 
+const chartBadgeClasses = [
+  'bg-chart-1/10 text-chart-1 dark:bg-chart-1/20',
+  'bg-chart-2/10 text-chart-2 dark:bg-chart-2/20',
+  'bg-chart-3/10 text-chart-3 dark:bg-chart-3/20',
+  'bg-chart-4/10 text-chart-4 dark:bg-chart-4/20',
+  'bg-chart-5/10 text-chart-5 dark:bg-chart-5/20',
+]
+
+const langChartIndex: Record<string, number> = {
+  Go: 0,
+  TypeScript: 1,
+  JavaScript: 2,
+  Python: 3,
+  Rust: 4,
+  Java: 0,
+  'C++': 1,
+}
+
 function langColor(lang: string) {
-  const map: Record<string, string> = {
-    Go: 'bg-sky-500/20 text-sky-300 border-sky-800',
-    TypeScript: 'bg-blue-500/20 text-blue-300 border-blue-800',
-    JavaScript: 'bg-yellow-500/20 text-yellow-300 border-yellow-800',
-    Python: 'bg-emerald-500/20 text-emerald-300 border-emerald-800',
-    Rust: 'bg-orange-500/20 text-orange-300 border-orange-800',
-    Java: 'bg-red-500/20 text-red-300 border-red-800',
-    'C++': 'bg-purple-500/20 text-purple-300 border-purple-800',
-  }
-  return map[lang] ?? 'bg-slate-500/20 text-slate-300 border-slate-700'
+  return chartBadgeClasses[langChartIndex[lang] ?? 4]
 }
 
 function FileTable({ repoId }: { repoId: number }) {
@@ -38,10 +49,10 @@ function FileTable({ repoId }: { repoId: number }) {
   const { data, isLoading } = useFiles(repoId, { sort, limit: 200 })
   if (isLoading) return <Spinner />
   const files = data?.files ?? []
-  if (!files.length) return <Empty message="No files" />
+  if (!files.length) return <EmptyState icon={FileCode2} title="No files" />
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm text-slate-400">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Sort by</span>
         <Select value={sort} onValueChange={(val) => val && setSort(val)}>
           <SelectTrigger className="w-48">
@@ -80,7 +91,7 @@ function FileTable({ repoId }: { repoId: number }) {
                 <TableCell>{f.complexity}</TableCell>
                 <TableCell>{f.funcCount}</TableCell>
                 <TableCell>{f.maxFuncLen}</TableCell>
-                <TableCell><span className="text-xs text-slate-400">{f.author || '—'}</span></TableCell>
+                <TableCell><span className="text-xs text-muted-foreground">{f.author || '—'}</span></TableCell>
                 <TableCell>{f.commits}</TableCell>
               </TableRow>
             ))}
@@ -101,7 +112,7 @@ function Level({
   const { data } = useTree(repoId, folder)
   if (!data) return <Spinner />
   return (
-    <ul className="ml-3 border-l border-slate-800">
+    <ul className="ml-3 border-l border-border">
       {data.folders.map((sub) => {
         const path = folder ? `${folder}/${sub}` : sub
         return (
@@ -112,10 +123,10 @@ function Level({
       })}
       {data.files.map((f) => (
         <li key={f.path}>
-          <span className="flex items-center gap-1 px-2 py-1 text-sm text-slate-400">
-            <span className="text-slate-500">▍</span>
+          <span className="flex items-center gap-1 px-2 py-1 text-sm text-muted-foreground">
+            <span className="text-muted-foreground/70">▍</span>
             {f.name}
-            <span className="ml-auto text-xs text-slate-600">{f.linesCode} loc</span>
+            <span className="ml-auto text-xs text-muted-foreground/70">{f.linesCode} loc</span>
           </span>
         </li>
       ))}
@@ -137,10 +148,10 @@ function FolderNode({
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1 px-2 py-1 text-left text-sm text-slate-300 hover:bg-slate-800/60"
+        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm text-foreground hover:bg-muted/60"
       >
-        <span className="text-slate-500">{open ? '▾' : '▸'}</span>
-        <span className="text-slate-400">📁</span>
+        <span className="text-muted-foreground">{open ? '▾' : '▸'}</span>
+        <span className="text-muted-foreground">📁</span>
         {label}
       </button>
       {open && <Level repoId={repoId} folder={folder} />}
@@ -151,7 +162,7 @@ function FolderNode({
 function TreeView({ repoId }: { repoId: number }) {
   const { data, isLoading } = useTree(repoId, '')
   if (isLoading) return <Spinner />
-  if (!data) return <Empty message="No files" />
+  if (!data) return <EmptyState icon={FileCode2} title="No files" />
   return (
     <ul>
       {data.folders.map((sub) => (
@@ -161,10 +172,10 @@ function TreeView({ repoId }: { repoId: number }) {
       ))}
       {data.files.map((f) => (
         <li key={f.path}>
-          <span className="flex items-center gap-1 px-2 py-1 text-sm text-slate-400">
-            <span className="text-slate-500">▍</span>
+          <span className="flex items-center gap-1 px-2 py-1 text-sm text-muted-foreground">
+            <span className="text-muted-foreground/70">▍</span>
             {f.name}
-            <span className="ml-auto text-xs text-slate-600">{f.linesCode} loc</span>
+            <span className="ml-auto text-xs text-muted-foreground/70">{f.linesCode} loc</span>
           </span>
         </li>
       ))}
@@ -176,7 +187,7 @@ function FilesPage() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const [view, setView] = useState<'tree' | 'table'>('tree')
-  if (repoId === 0) return <Empty message="Scan a repository first" />
+  if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
 
   return (
     <div className="flex flex-col gap-4">
@@ -195,7 +206,11 @@ function FilesPage() {
           <RepoSelector />
         </div>
       </div>
-      <Card>{view === 'tree' ? <TreeView repoId={repoId} /> : <FileTable repoId={repoId} />}</Card>
+      <Card>
+        <CardContent>
+          {view === 'tree' ? <TreeView repoId={repoId} /> : <FileTable repoId={repoId} />}
+        </CardContent>
+      </Card>
     </div>
   )
 }

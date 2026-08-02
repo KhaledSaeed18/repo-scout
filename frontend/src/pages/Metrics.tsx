@@ -1,3 +1,4 @@
+import { FileBarChart2, FolderGit2 } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -7,30 +8,26 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Empty, Spinner, Stat, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Stat, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useMetrics, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 
 const colors = [
-  '#38bdf8',
-  '#f59e0b',
-  '#34d399',
-  '#f87171',
-  '#a78bfa',
-  '#22d3ee',
-  '#fb923c',
-  '#4ade80',
-  '#e879f9',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
 ]
 
 function MetricsPage() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const { data, isLoading } = useMetrics(repoId)
-  if (repoId === 0) return <Empty message="Scan a repository first" />
+  if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
   if (isLoading) return <Spinner />
-  if (!data) return <Empty message="No metrics yet" />
+  if (!data) return <EmptyState icon={FileBarChart2} title="No metrics yet" />
 
   const langData = Object.entries(data.languages)
     .filter(([, v]) => v.files > 0)
@@ -52,29 +49,36 @@ function MetricsPage() {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <h3 className="mb-3 text-sm font-medium text-slate-300">Lines of code by language</h3>
-          {langData.length ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={langData}>
-                <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155' }}
-                />
-                <Bar dataKey="code" radius={[4, 4, 0, 0]}>
-                  {langData.map((_, i) => (
-                    <Cell key={i} fill={colors[i % colors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Empty message="No source files" />
-          )}
+          <CardHeader>
+            <CardTitle className="text-sm">Lines of code by language</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {langData.length ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={langData}>
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)' }}
+                    labelStyle={{ color: 'var(--popover-foreground)' }}
+                  />
+                  <Bar dataKey="code" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                    {langData.map((_, i) => (
+                      <Cell key={i} fill={colors[i % colors.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState icon={FileBarChart2} title="No source files" />
+            )}
+          </CardContent>
         </Card>
-        <Card className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">Aggregates</h3>
-          <div className="overflow-x-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Aggregates</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -109,66 +113,74 @@ function MetricsPage() {
                 </TableRow>
               </TableBody>
             </Table>
-          </div>
+          </CardContent>
         </Card>
       </div>
       <Card>
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Largest files</h3>
-        {(data.largestFiles ?? []).length === 0 ? (
-          <Empty message="No files" />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>File</TableHead>
-                  <TableHead>Code lines</TableHead>
-                  <TableHead>Complexity</TableHead>
-                  <TableHead>Functions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.largestFiles.map((f) => (
-                  <TableRow key={f.path}>
-                    <TableCell><span className="text-sky-400">{f.path}</span></TableCell>
-                    <TableCell>{f.linesCode}</TableCell>
-                    <TableCell>{f.complexity}</TableCell>
-                    <TableCell>{f.funcCount}</TableCell>
+        <CardHeader>
+          <CardTitle className="text-sm">Largest files</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(data.largestFiles ?? []).length === 0 ? (
+            <EmptyState icon={FileBarChart2} title="No files" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>File</TableHead>
+                    <TableHead>Code lines</TableHead>
+                    <TableHead>Complexity</TableHead>
+                    <TableHead>Functions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {data.largestFiles.map((f) => (
+                    <TableRow key={f.path}>
+                      <TableCell><span className="text-primary">{f.path}</span></TableCell>
+                      <TableCell>{f.linesCode}</TableCell>
+                      <TableCell>{f.complexity}</TableCell>
+                      <TableCell>{f.funcCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
       <Card>
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Most complex files</h3>
-        {(data.mostComplexFiles ?? []).length === 0 ? (
-          <Empty message="No files" />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>File</TableHead>
-                  <TableHead>Complexity</TableHead>
-                  <TableHead>Functions</TableHead>
-                  <TableHead>Max nesting</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.mostComplexFiles.map((f) => (
-                  <TableRow key={f.path}>
-                    <TableCell><span className="text-sky-400">{f.path}</span></TableCell>
-                    <TableCell>{f.complexity}</TableCell>
-                    <TableCell>{f.funcCount}</TableCell>
-                    <TableCell>{f.maxNesting}</TableCell>
+        <CardHeader>
+          <CardTitle className="text-sm">Most complex files</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(data.mostComplexFiles ?? []).length === 0 ? (
+            <EmptyState icon={FileBarChart2} title="No files" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>File</TableHead>
+                    <TableHead>Complexity</TableHead>
+                    <TableHead>Functions</TableHead>
+                    <TableHead>Max nesting</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {data.mostComplexFiles.map((f) => (
+                    <TableRow key={f.path}>
+                      <TableCell><span className="text-primary">{f.path}</span></TableCell>
+                      <TableCell>{f.complexity}</TableCell>
+                      <TableCell>{f.funcCount}</TableCell>
+                      <TableCell>{f.maxNesting}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   )

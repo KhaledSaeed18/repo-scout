@@ -1,3 +1,4 @@
+import { FolderGit2, ScanLine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   Bar,
@@ -12,7 +13,10 @@ import {
   Badge,
   Button,
   Card,
-  Empty,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
   Spinner,
   Stat,
   Table,
@@ -32,43 +36,55 @@ function formatBytes(n: number) {
   return `${(n / 1024).toFixed(1)} KiB`
 }
 
-function statusColor(s: string) {
+function statusVariant(s: string): 'success' | 'warning' | 'destructive' {
   switch (s) {
     case 'ready':
-      return 'bg-emerald-500/20 text-emerald-400 border-emerald-800'
+      return 'success'
     case 'scanning':
-      return 'bg-amber-500/20 text-amber-400 border-amber-800'
+      return 'warning'
     default:
-      return 'bg-rose-500/20 text-rose-400 border-rose-800'
+      return 'destructive'
   }
 }
 
 function LanguageBreakdown({ repo }: { repo: Repository }) {
-  if (repo.fileCount === 0) return <Empty message="No files scanned yet" />
+  if (repo.fileCount === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState icon={ScanLine} title="No files scanned yet" />
+        </CardContent>
+      </Card>
+    )
+  }
   const data = [
     { name: 'Code', value: repo.totalCode },
     { name: 'Comments', value: repo.totalComments },
     { name: 'Blank', value: repo.totalBlank },
   ]
-  const colors = ['#38bdf8', '#f59e0b', '#64748b']
+  const colors = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-5)']
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">Line composition</h3>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data}>
-          <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-          <YAxis stroke="#64748b" fontSize={12} />
-          <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #334155' }}
-            labelStyle={{ color: '#e2e8f0' }}
-          />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-            {data.map((_, i) => (
-              <Cell key={i} fill={colors[i]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <CardHeader>
+        <CardTitle className="text-sm">Line composition</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={data}>
+            <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} />
+            <YAxis stroke="var(--muted-foreground)" fontSize={12} />
+            <Tooltip
+              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)' }}
+              labelStyle={{ color: 'var(--popover-foreground)' }}
+            />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+              {data.map((_, i) => (
+                <Cell key={i} fill={colors[i]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   )
 }
@@ -76,61 +92,63 @@ function LanguageBreakdown({ repo }: { repo: Repository }) {
 function RepoCard({ repo }: { repo: Repository }) {
   const del = useDeleteRepo()
   return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="truncate font-medium text-slate-100">{repo.name}</h3>
-          <p className="truncate text-xs text-slate-500">{repo.path}</p>
+    <Card>
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="truncate font-medium text-foreground">{repo.name}</h3>
+            <p className="truncate text-xs text-muted-foreground">{repo.path}</p>
+          </div>
+          <Badge variant={statusVariant(repo.status)}>{repo.status}</Badge>
         </div>
-        <Badge className={statusColor(repo.status)}>{repo.status}</Badge>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <span className="text-slate-400">
-          Files <b className="text-slate-100">{repo.fileCount}</b>
-        </span>
-        <span className="text-slate-400">
-          Commits <b className="text-slate-100">{repo.commitCount}</b>
-        </span>
-        <span className="text-slate-400">
-          Contributors <b className="text-slate-100">{repo.contributorCount}</b>
-        </span>
-        <span className="text-slate-400">
-          Size <b className="text-slate-100">{formatBytes(repo.totalSize)}</b>
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Link to={`/git?repo=${repo.id}`}>
-          <Button variant="outline" className="text-xs">
-            Git
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <span className="text-muted-foreground">
+            Files <b className="text-foreground">{repo.fileCount}</b>
+          </span>
+          <span className="text-muted-foreground">
+            Commits <b className="text-foreground">{repo.commitCount}</b>
+          </span>
+          <span className="text-muted-foreground">
+            Contributors <b className="text-foreground">{repo.contributorCount}</b>
+          </span>
+          <span className="text-muted-foreground">
+            Size <b className="text-foreground">{formatBytes(repo.totalSize)}</b>
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/git?repo=${repo.id}`}>
+            <Button variant="outline" className="text-xs">
+              Git
+            </Button>
+          </Link>
+          <Link to={`/architecture?repo=${repo.id}`}>
+            <Button variant="outline" className="text-xs">
+              Graph
+            </Button>
+          </Link>
+          <a download href={api.exportUrl(repo.id, 'files', 'json')}>
+            <Button variant="ghost" className="text-xs">
+              JSON
+            </Button>
+          </a>
+          <a download href={api.exportUrl(repo.id, 'files', 'csv')}>
+            <Button variant="ghost" className="text-xs">
+              CSV
+            </Button>
+          </a>
+          <Button
+            variant="ghost"
+            className="ml-auto text-xs text-destructive"
+            onClick={() => {
+              if (window.confirm(`Delete repository "${repo.name}" and its data?`)) {
+                del.mutate(repo.id)
+              }
+            }}
+          >
+            Delete
           </Button>
-        </Link>
-        <Link to={`/architecture?repo=${repo.id}`}>
-          <Button variant="outline" className="text-xs">
-            Graph
-          </Button>
-        </Link>
-        <a download href={api.exportUrl(repo.id, 'files', 'json')}>
-          <Button variant="ghost" className="text-xs">
-            JSON
-          </Button>
-        </a>
-        <a download href={api.exportUrl(repo.id, 'files', 'csv')}>
-          <Button variant="ghost" className="text-xs">
-            CSV
-          </Button>
-        </a>
-        <Button
-          variant="ghost"
-          className="ml-auto text-xs text-rose-400"
-          onClick={() => {
-            if (window.confirm(`Delete repository "${repo.name}" and its data?`)) {
-              del.mutate(repo.id)
-            }
-          }}
-        >
-          Delete
-        </Button>
-      </div>
+        </div>
+      </CardContent>
     </Card>
   )
 }
@@ -142,7 +160,11 @@ function DashboardInner() {
 
   if (repos.repositories.length === 0) {
     return (
-      <Empty message="No repositories scanned yet. Go to Scan to add one." />
+      <EmptyState
+        icon={FolderGit2}
+        title="No repositories scanned yet"
+        description="Go to Scan to add your first repository."
+      />
     )
   }
 
@@ -177,9 +199,11 @@ function DashboardInner() {
         </>
       )}
 
-      <Card className="overflow-hidden">
-        <h2 className="mb-3 text-sm font-medium text-slate-300 px-6 pt-6">Repositories</h2>
-        <div className="overflow-x-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Repositories</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -195,24 +219,24 @@ function DashboardInner() {
               {repos.repositories.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>
-                    <Link to={`/files?repo=${r.id}`} className="text-sky-400">
+                    <Link to={`/files?repo=${r.id}`} className="text-primary">
                       {r.name}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge className={statusColor(r.status)}>
+                    <Badge variant={statusVariant(r.status)}>
                       {r.status}
                     </Badge>
                   </TableCell>
                   <TableCell>{r.fileCount}</TableCell>
                   <TableCell>{r.totalCode.toLocaleString()}</TableCell>
                   <TableCell>{r.commitCount}</TableCell>
-                  <TableCell className="text-xs text-slate-500">{r.path}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.path}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+        </CardContent>
       </Card>
     </div>
   )

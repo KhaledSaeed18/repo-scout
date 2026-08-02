@@ -1,9 +1,13 @@
+import { ListTodo } from 'lucide-react'
 import { useState } from 'react'
 import {
   Badge,
   Button,
   Card,
-  Empty,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
   Input,
   Progress,
   Spinner,
@@ -20,21 +24,21 @@ import type { Job } from '../lib/types'
 
 const jobActions = ['pause', 'resume', 'cancel'] as const
 
-function statusColor(s: string) {
+function statusVariant(s: string): 'success' | 'warning' | 'secondary' | 'destructive' {
   switch (s) {
     case 'completed':
-      return 'bg-emerald-500/20 text-emerald-400 border-emerald-800'
+      return 'success'
     case 'running':
     case 'queued':
-      return 'bg-amber-500/20 text-amber-400 border-amber-800'
+      return 'warning'
     case 'paused':
-      return 'bg-sky-500/20 text-sky-400 border-sky-800'
+      return 'secondary'
     case 'failed':
     case 'cancelled':
     case 'interrupted':
-      return 'bg-rose-500/20 text-rose-400 border-rose-800'
+      return 'destructive'
     default:
-      return ''
+      return 'secondary'
   }
 }
 
@@ -63,7 +67,7 @@ function JobRow({ job }: { job: Job }) {
       <TableCell>{job.repoId}</TableCell>
       <TableCell>{job.kind}</TableCell>
       <TableCell>
-        <Badge className={statusColor(job.status)}>
+        <Badge variant={statusVariant(job.status)}>
           {job.status}
         </Badge>
       </TableCell>
@@ -72,7 +76,7 @@ function JobRow({ job }: { job: Job }) {
           <Progress value={Math.round(job.progress * 100)} />
         </div>
       </TableCell>
-      <TableCell className="block max-w-56 truncate text-xs text-slate-400">
+      <TableCell className="block max-w-56 truncate text-xs text-muted-foreground">
         {job.message}
       </TableCell>
       <TableCell>
@@ -99,58 +103,60 @@ function ScanPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">Scan</h1>
       <Card>
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <label className="text-sm text-slate-300">
-            Local repository path
-            <Input
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              placeholder="/Users/me/projects/my-repo"
-              className="mt-1"
-            />
-          </label>
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={create.isPending || !path.trim()}>
-              {create.isPending && <Spinner />}
-              Scan repository
-            </Button>
-            {create.isError && (
-              <span className="text-sm text-rose-400">{create.error.message}</span>
-            )}
-          </div>
-        </form>
+        <CardContent>
+          <form onSubmit={submit} className="flex flex-col gap-3">
+            <label className="text-sm text-muted-foreground">
+              Local repository path
+              <Input
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                placeholder="/Users/me/projects/my-repo"
+                className="mt-1"
+              />
+            </label>
+            <div className="flex items-center gap-2">
+              <Button type="submit" disabled={create.isPending || !path.trim()}>
+                {create.isPending && <Spinner />}
+                Scan repository
+              </Button>
+              {create.isError && (
+                <span className="text-sm text-destructive">{create.error.message}</span>
+              )}
+            </div>
+          </form>
+        </CardContent>
       </Card>
 
-      <Card className="overflow-hidden">
-        <h2 className="mb-3 text-sm font-medium text-slate-300 px-6 pt-6">Jobs</h2>
-        {isLoading ? (
-          <div className="px-6 py-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Jobs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
             <Spinner />
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="px-6 py-4">
-            <Empty message="No jobs yet" />
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Repo</TableHead>
-                  <TableHead>Kind</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {jobs.map((j) => JobRow({ job: j }))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+          ) : jobs.length === 0 ? (
+            <EmptyState icon={ListTodo} title="No jobs yet" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Repo</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {jobs.map((j) => JobRow({ job: j }))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   )

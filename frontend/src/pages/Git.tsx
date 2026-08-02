@@ -1,3 +1,4 @@
+import { Activity, Flame, FolderGit2, GitBranch, GitCommitHorizontal, Tag, Users } from 'lucide-react'
 import { useState } from 'react'
 import {
   Bar,
@@ -8,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card, Empty, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
 import RepoSelector from '../components/RepoSelector'
@@ -28,17 +29,19 @@ function HeatmapGrid({ heatmap }: { heatmap: import('../lib/types').Heatmap }) {
   if (week.length) weeks.push(week)
   const level = (count: number) => {
     const r = count / max
-    if (count === 0) return 'bg-slate-800'
-    if (r > 0.66) return 'bg-emerald-500'
-    if (r > 0.33) return 'bg-emerald-600'
-    return 'bg-emerald-800'
+    if (count === 0) return 'bg-muted'
+    if (r > 0.66) return 'bg-chart-2'
+    if (r > 0.33) return 'bg-chart-2/60'
+    return 'bg-chart-2/30'
   }
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">
-        Commit activity ({heatmap.total} commits, {heatmap.start} → {heatmap.end})
-      </h3>
-      <div className="flex gap-1 overflow-x-auto">
+      <CardHeader>
+        <CardTitle className="text-sm">
+          Commit activity ({heatmap.total} commits, {heatmap.start} → {heatmap.end})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex gap-1 overflow-x-auto">
         {weeks.map((w, i) => (
           <div key={i} className="flex flex-col gap-1">
             {w.map((d) => (
@@ -50,7 +53,7 @@ function HeatmapGrid({ heatmap }: { heatmap: import('../lib/types').Heatmap }) {
             ))}
           </div>
         ))}
-      </div>
+      </CardContent>
     </Card>
   )
 }
@@ -62,36 +65,51 @@ function HourlyHeatmap({ hourly }: { hourly: number[][] }) {
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">Hour of week</h3>
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={data}>
-          <XAxis dataKey="hr" hide />
-          <YAxis hide />
-          <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #334155' }}
-            formatter={(value) => [Number(value), 'commits']}
-            labelFormatter={(_, p) => {
-              const d = p?.[0]?.payload as { wd: number; hr: number }
-              return d ? `weekday ${d.wd} · ${d.hr}:00` : ''
-            }}
-          />
-          <Bar dataKey="count" radius={[2, 2, 0, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.count / max > 0.5 ? '#38bdf8' : '#0ea5e9'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <CardHeader>
+        <CardTitle className="text-sm">Hour of week</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={data}>
+            <XAxis dataKey="hr" hide />
+            <YAxis hide />
+            <Tooltip
+              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)' }}
+              labelStyle={{ color: 'var(--popover-foreground)' }}
+              formatter={(value) => [Number(value), 'commits']}
+              labelFormatter={(_, p) => {
+                const d = p?.[0]?.payload as { wd: number; hr: number }
+                return d ? `weekday ${d.wd} · ${d.hr}:00` : ''
+              }}
+            />
+            <Bar dataKey="count" radius={[2, 2, 0, 0]} isAnimationActive={false}>
+              {data.map((d, i) => (
+                <Cell key={i} fill="var(--chart-1)" fillOpacity={d.count / max > 0.5 ? 1 : 0.5} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   )
 }
 
 function StreaksView({ streaks }: { streaks: import('../lib/types').StreaksResult[] }) {
-  if (!streaks || !streaks.length) return <Empty message="No streak data" />
+  if (!streaks || !streaks.length) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState icon={Flame} title="No streak data" />
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">Streaks</h3>
-      <div className="overflow-x-auto">
+      <CardHeader>
+        <CardTitle className="text-sm">Streaks</CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -114,7 +132,7 @@ function StreaksView({ streaks }: { streaks: import('../lib/types').StreaksResul
             ))}
           </TableBody>
         </Table>
-      </div>
+      </CardContent>
     </Card>
   )
 }
@@ -130,23 +148,28 @@ function ContributorsChart({
   }))
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">Top contributors</h3>
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
-          <XAxis type="number" stroke="#64748b" fontSize={12} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            stroke="#64748b"
-            fontSize={11}
-            width={110}
-          />
-          <Tooltip
-            contentStyle={{ background: '#0f172a', border: '1px solid #334155' }}
-          />
-          <Bar dataKey="commits" fill="#38bdf8" radius={[0, 4, 4, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      <CardHeader>
+        <CardTitle className="text-sm">Top contributors</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
+            <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="var(--muted-foreground)"
+              fontSize={11}
+              width={110}
+            />
+            <Tooltip
+              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)' }}
+              labelStyle={{ color: 'var(--popover-foreground)' }}
+            />
+            <Bar dataKey="commits" fill="var(--chart-1)" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   )
 }
@@ -155,7 +178,7 @@ function CommitsView({ repoId }: { repoId: number }) {
   const { data, isLoading } = useCommits(repoId, 200)
   if (isLoading) return <Spinner />
   const commits = data?.commits ?? []
-  if (!commits.length) return <Empty message="No commits" />
+  if (!commits.length) return <EmptyState icon={GitCommitHorizontal} title="No commits" />
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -174,14 +197,14 @@ function CommitsView({ repoId }: { repoId: number }) {
         <TableBody>
           {commits.map((c) => (
             <TableRow key={c.hash}>
-              <TableCell><code className="text-xs text-sky-400">{c.hash.slice(0, 8)}</code></TableCell>
+              <TableCell><code className="text-xs text-primary">{c.hash.slice(0, 8)}</code></TableCell>
               <TableCell>{c.author}</TableCell>
               <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
               <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
               <TableCell>{c.filesChanged}</TableCell>
-              <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
-              <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
-              <TableCell>{c.isMerge ? <span className="text-amber-400 text-xs">✓</span> : ''}</TableCell>
+              <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
+              <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
+              <TableCell>{c.isMerge ? <span className="text-chart-3 text-xs">✓</span> : ''}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -194,7 +217,7 @@ function LargestCommitsView({ repoId }: { repoId: number }) {
   const { data, isLoading } = useLargestCommits(repoId)
   if (isLoading) return <Spinner />
   const commits = data?.commits ?? []
-  if (!commits.length) return <Empty message="No commits" />
+  if (!commits.length) return <EmptyState icon={GitCommitHorizontal} title="No commits" />
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -212,13 +235,13 @@ function LargestCommitsView({ repoId }: { repoId: number }) {
         <TableBody>
           {commits.map((c) => (
             <TableRow key={c.hash}>
-              <TableCell><code className="text-xs text-sky-400">{c.hash.slice(0, 8)}</code></TableCell>
+              <TableCell><code className="text-xs text-primary">{c.hash.slice(0, 8)}</code></TableCell>
               <TableCell>{c.author}</TableCell>
               <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
               <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
               <TableCell>{c.filesChanged}</TableCell>
-              <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
-              <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
+              <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
+              <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -231,13 +254,23 @@ function OwnershipView({ repoId }: { repoId: number }) {
   const { data, isLoading } = useOwnership(repoId)
   if (isLoading) return <Spinner />
   const ownership = data?.byAuthor ?? []
-  if (!ownership.length) return <Empty message="No ownership data" />
+  if (!ownership.length) {
+    return (
+      <Card>
+        <CardContent>
+          <EmptyState icon={Users} title="No ownership data" />
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-medium text-slate-300">
-        File ownership ({ownership.length} authors, {data?.total} files)
-      </h3>
-      <div className="overflow-x-auto">
+      <CardHeader>
+        <CardTitle className="text-sm">
+          File ownership ({ownership.length} authors, {data?.total} files)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -256,7 +289,7 @@ function OwnershipView({ repoId }: { repoId: number }) {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </CardContent>
     </Card>
   )
 }
@@ -270,56 +303,64 @@ function BranchesTagsView({ repoId }: { repoId: number }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Branches</h3>
-        {branches.length === 0 ? (
-          <Empty message="No branches" />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Commit</TableHead>
-                  <TableHead>Current</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {branches.map((b) => (
-                  <TableRow key={b.name}>
-                    <TableCell><span className={b.isCurrent ? 'text-sky-400 font-medium' : ''}>{b.name}</span></TableCell>
-                    <TableCell><code className="text-xs text-slate-500">{b.commitHash.slice(0, 8)}</code></TableCell>
-                    <TableCell>{b.isCurrent ? <span className="text-emerald-400 text-xs">HEAD</span> : ''}</TableCell>
+        <CardHeader>
+          <CardTitle className="text-sm">Branches</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {branches.length === 0 ? (
+            <EmptyState icon={GitBranch} title="No branches" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Commit</TableHead>
+                    <TableHead>Current</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {branches.map((b) => (
+                    <TableRow key={b.name}>
+                      <TableCell><span className={b.isCurrent ? 'text-primary font-medium' : ''}>{b.name}</span></TableCell>
+                      <TableCell><code className="text-xs text-muted-foreground">{b.commitHash.slice(0, 8)}</code></TableCell>
+                      <TableCell>{b.isCurrent ? <span className="text-chart-2 text-xs">HEAD</span> : ''}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
       <Card>
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Tags</h3>
-        {tags.length === 0 ? (
-          <Empty message="No tags" />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Commit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tags.map((t) => (
-                  <TableRow key={t.name}>
-                    <TableCell>{t.name}</TableCell>
-                    <TableCell><code className="text-xs text-slate-500">{t.commitHash.slice(0, 8)}</code></TableCell>
+        <CardHeader>
+          <CardTitle className="text-sm">Tags</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tags.length === 0 ? (
+            <EmptyState icon={Tag} title="No tags" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Commit</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableHeader>
+                <TableBody>
+                  {tags.map((t) => (
+                    <TableRow key={t.name}>
+                      <TableCell>{t.name}</TableCell>
+                      <TableCell><code className="text-xs text-muted-foreground">{t.commitHash.slice(0, 8)}</code></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   )
@@ -328,7 +369,7 @@ function BranchesTagsView({ repoId }: { repoId: number }) {
 function ActivityTab({ repoId }: { repoId: number }) {
   const { data, isLoading } = useHeatmap(repoId)
   if (isLoading) return <Spinner />
-  if (!data) return <Empty message="No activity yet" />
+  if (!data) return <EmptyState icon={Activity} title="No activity yet" />
   return (
     <div className="flex flex-col gap-4">
       <HeatmapGrid heatmap={data.heatmap} />
@@ -344,7 +385,7 @@ function ContributorsTab({ repoId }: { repoId: number }) {
   const { data, isLoading } = useContributors(repoId)
   if (isLoading) return <Spinner />
   const contributors = data?.contributors ?? []
-  if (!contributors.length) return <Empty message="No contributors" />
+  if (!contributors.length) return <EmptyState icon={Users} title="No contributors" />
   return (
     <div className="flex flex-col gap-4">
       <ContributorsChart contributors={contributors} />
@@ -366,8 +407,8 @@ function ContributorsTab({ repoId }: { repoId: number }) {
                 <TableCell>{c.name}</TableCell>
                 <TableCell>{c.email}</TableCell>
                 <TableCell>{c.commits}</TableCell>
-                <TableCell><span className="text-emerald-400">+{c.insertions}</span></TableCell>
-                <TableCell><span className="text-rose-400">−{c.deletions}</span></TableCell>
+                <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
+                <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
                 <TableCell>{new Date(c.firstCommitAt).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
@@ -382,7 +423,7 @@ function GitInner() {
   const { repoId } = useRepoContext()
   const [tab, setTab] = useState<'activity' | 'commits' | 'contributors' | 'largest' | 'ownership' | 'branches-tags'>('activity')
   const repo = useRepo(repoId).data
-  if (repoId === 0) return <Empty message="Scan a repository first" />
+  if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">

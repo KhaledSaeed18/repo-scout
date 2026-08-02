@@ -12,10 +12,10 @@ export function Stat({
 }) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-1 pt-6">
-        <span className="text-xs uppercase tracking-wide text-slate-500">{label}</span>
-        <span className="text-2xl font-semibold text-slate-100">{value}</span>
-        {sub && <span className="text-xs text-slate-400">{sub}</span>}
+      <CardContent className="flex flex-col gap-1">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="text-2xl font-semibold text-foreground">{value}</span>
+        {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
       </CardContent>
     </Card>
   )

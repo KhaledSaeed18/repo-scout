@@ -19,8 +19,8 @@ export default function App() {
   useLiveUpdates()
   return (
     <div className="flex h-full">
-      <aside className="flex w-52 flex-col gap-1 border-r border-slate-800 bg-slate-900 p-3">
-        <div className="mb-3 px-2 text-sm font-semibold tracking-wide text-sky-400">
+      <aside className="flex w-52 flex-col gap-1 border-r border-sidebar-border bg-sidebar p-3">
+        <div className="mb-3 px-2 text-sm font-semibold tracking-wide text-sidebar-primary">
           repo-scout
         </div>
         {nav.map((item) => (
@@ -31,8 +31,8 @@ export default function App() {
               cn(
                 'rounded-md px-3 py-1.5 text-sm transition-colors',
                 isActive
-                  ? 'bg-slate-800 text-sky-400'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200',
+                  ? 'bg-sidebar-accent/15 text-sidebar-primary'
+                  : 'text-muted-foreground hover:bg-sidebar-accent/10 hover:text-sidebar-foreground',
               )
             }
           >

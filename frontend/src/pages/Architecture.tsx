@@ -1,3 +1,4 @@
+import { FolderGit2, Network, Workflow } from 'lucide-react'
 import { useMemo } from 'react'
 import ReactFlow, {
   Background,
@@ -6,7 +7,7 @@ import ReactFlow, {
   type Node,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Button, Card, Empty, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useArchitecture, useRepo } from '../lib/api'
 import { RepoProvider, useRepoContext } from '../lib/repoctx'
@@ -52,10 +53,10 @@ function layout(edges: { from: string; to: string }[]): {
     position: positions.get(n)!,
     data: { label: n.split('/').pop() },
     style: {
-      background: '#111a2e',
-      border: '1px solid #334155',
+      background: 'var(--card)',
+      border: '1px solid var(--border)',
       borderRadius: 6,
-      color: '#e2e8f0',
+      color: 'var(--card-foreground)',
       fontSize: 11,
       width: nodeWidth,
       height: nodeHeight,
@@ -66,7 +67,7 @@ function layout(edges: { from: string; to: string }[]): {
     source: e.from,
     target: e.to,
     animated: false,
-    style: { stroke: '#38bdf8', strokeOpacity: 0.5 },
+    style: { stroke: 'var(--chart-1)', strokeOpacity: 0.5 },
   }))
   return { nodes, edges: flowEdges }
 }
@@ -79,9 +80,9 @@ function ArchitecturePage() {
     () => layout((data?.edges ?? []).map((e) => ({ from: e.from, to: e.to }))),
     [data?.edges],
   )
-  if (repoId === 0) return <Empty message="Scan a repository first" />
+  if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
   if (isLoading) return <Spinner />
-  if (!data) return <Empty message="No architecture data" />
+  if (!data) return <EmptyState icon={Network} title="No architecture data" />
 
   const nodeCount = graph.nodes.length
   const edges = graph.edges.length
@@ -99,23 +100,23 @@ function ArchitecturePage() {
       </div>
 
       {graph.nodes.length === 0 ? (
-        <Empty message="No import edges to visualize" />
+        <EmptyState icon={Workflow} title="No import edges to visualize" />
       ) : (
         <>
           <Card className="p-0">
             <div className="h-[520px]">
               <ReactFlow nodes={graph.nodes} edges={graph.edges} fitView nodesDraggable>
-                <Background gap={16} color="#1e293b" />
+                <Background gap={16} color="var(--border)" />
                 <Controls />
               </ReactFlow>
             </div>
           </Card>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">
-                Graph summary
-              </h3>
-              <div className="overflow-x-auto">
+              <CardHeader>
+                <CardTitle className="text-sm">Graph summary</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -150,11 +151,13 @@ function ArchitecturePage() {
                     </TableRow>
                   </TableBody>
                 </Table>
-              </div>
+              </CardContent>
             </Card>
             <Card>
-              <h3 className="mb-3 text-sm font-medium text-slate-300">Issues</h3>
-              <div className="overflow-x-auto">
+              <CardHeader>
+                <CardTitle className="text-sm">Issues</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -177,7 +180,7 @@ function ArchitecturePage() {
                     </TableRow>
                   </TableBody>
                 </Table>
-              </div>
+              </CardContent>
             </Card>
           </div>
         </>
