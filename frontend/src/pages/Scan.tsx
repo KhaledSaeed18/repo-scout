@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui'
+import FolderPicker from '../components/FolderPicker'
 import { api, useCreateRepo, useJobs } from '../lib/api'
 import { RepoProvider } from '../lib/repoctx'
 import type { Job } from '../lib/types'
@@ -107,12 +108,14 @@ function ScanPage() {
           <form onSubmit={submit} className="flex flex-col gap-3">
             <label className="text-sm text-muted-foreground">
               Local repository path
-              <Input
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                placeholder="/Users/me/projects/my-repo"
-                className="mt-1"
-              />
+              <div className="mt-1 flex items-center gap-2">
+                <Input
+                  value={path}
+                  onChange={(e) => setPath(e.target.value)}
+                  placeholder="/Users/me/projects/my-repo"
+                />
+                <FolderPicker onSelect={setPath} />
+              </div>
             </label>
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={create.isPending || !path.trim()}>

@@ -279,3 +279,14 @@ export interface Tag {
   name: string
   commitHash: string
 }
+
+export interface BrowseEntry {
+  name: string
+  path: string
+}
+
+export interface BrowseResponse {
+  path: string
+  parent: string
+  entries: BrowseEntry[]
+}

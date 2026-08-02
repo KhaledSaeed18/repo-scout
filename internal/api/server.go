@@ -44,6 +44,7 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/api/health", s.handleHealth)
 	r.Get("/api/ws", s.handleWS)
+	r.Get("/api/browse", s.handleBrowse)
 
 	r.Route("/api/repositories", func(r chi.Router) {
 		r.Post("/", s.handleCreateRepo)

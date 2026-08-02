@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   Architecture,
   Branch,
+  BrowseResponse,
   Commit,
   Contributor,
   DependenciesResponse,
@@ -85,6 +86,8 @@ export const api = {
     ).toString()
     return get<SearchResult>(`/api/search?${qs}`)
   },
+  browse: (path: string) =>
+    get<BrowseResponse>(`/api/browse?path=${encodeURIComponent(path)}`),
   jobs: () => get<{ jobs: Job[] }>('/api/jobs'),
   jobAction: (id: number, action: 'pause' | 'resume' | 'cancel') =>
     request<{ ok: boolean }>(`/api/jobs/${id}/${action}`, { method: 'POST' }),
@@ -200,6 +203,14 @@ export const useMetrics = (id: number) =>
     queryKey: ['metrics', id],
     queryFn: () => api.metrics(id),
     enabled: id > 0,
+  })
+
+export const useBrowse = (path: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['browse', path],
+    queryFn: () => api.browse(path),
+    enabled,
+    staleTime: 10000,
   })
 
 export const useJobs = (refetchMs = 3000) =>
