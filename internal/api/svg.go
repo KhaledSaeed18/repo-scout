@@ -65,8 +65,8 @@ func renderSVG(nodes map[string]bool, edges []models.ImportEdge) string {
 	totalH := padY*2 + maxRows*rowSpace
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="monospace" font-size="11">`,
-		totalW, totalH, totalW, totalH))
+	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="monospace" font-size="11">`,
+		totalW, totalH, totalW, totalH)
 	b.WriteString(`<rect width="100%" height="100%" fill="#0b0f19"/>`)
 
 	for _, e := range edges {
@@ -80,8 +80,8 @@ func renderSVG(nodes map[string]bool, edges []models.ImportEdge) string {
 		x2 := to[0]
 		y2 := to[1] + h/2
 		mid := (x1 + x2) / 2
-		b.WriteString(fmt.Sprintf(`<path d="M %0.1f %0.1f C %0.1f %0.1f %0.1f %0.1f %0.1f %0.1f" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.2"/>`,
-			x1, y1, mid, y1, mid, y2, x2, y2))
+		fmt.Fprintf(&b, `<path d="M %0.1f %0.1f C %0.1f %0.1f %0.1f %0.1f %0.1f %0.1f" fill="none" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.2"/>`,
+			x1, y1, mid, y1, mid, y2, x2, y2)
 	}
 
 	for _, n := range names {
@@ -90,8 +90,8 @@ func renderSVG(nodes map[string]bool, edges []models.ImportEdge) string {
 		if len(label) > 22 {
 			label = label[:22]
 		}
-		b.WriteString(fmt.Sprintf(`<rect x="%0.1f" y="%0.1f" width="%d" height="%d" rx="6" fill="#111a2e" stroke="#334155" stroke-width="1"/>`, x, y, w, h))
-		b.WriteString(fmt.Sprintf(`<text x="%0.1f" y="%0.1f" fill="#e2e8f0" dominant-baseline="middle">%s</text>`, x+8, y+h/2, escapeXML(label)))
+		fmt.Fprintf(&b, `<rect x="%0.1f" y="%0.1f" width="%d" height="%d" rx="6" fill="#111a2e" stroke="#334155" stroke-width="1"/>`, x, y, w, h)
+		fmt.Fprintf(&b, `<text x="%0.1f" y="%0.1f" fill="#e2e8f0" dominant-baseline="middle">%s</text>`, x+8, y+h/2, escapeXML(label))
 	}
 
 	b.WriteString(`</svg>`)

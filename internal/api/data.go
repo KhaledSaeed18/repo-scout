@@ -214,5 +214,5 @@ func (s *Server) handleSVG(w http.ResponseWriter, r *http.Request) {
 	svg := renderSVG(nodes, edgeRows)
 	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=architecture-%d.svg", id))
-	w.Write([]byte(svg))
+	_, _ = w.Write([]byte(svg))
 }

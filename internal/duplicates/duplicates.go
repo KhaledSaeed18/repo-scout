@@ -64,7 +64,6 @@ func (d *Detector) Detect(ctx context.Context, repoID uint, root string, files [
 	// Select candidate files and normalize them.
 	type candidate struct {
 		file         models.File
-		lines        []langdetect.CodeLine
 		norms        []string
 		shingleCount int
 	}

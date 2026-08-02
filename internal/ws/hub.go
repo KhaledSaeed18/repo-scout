@@ -80,16 +80,16 @@ func (h *Hub) Broadcast(ev Event) {
 func (h *Hub) readLoop(c *client) {
 	defer func() {
 		h.remove(c)
-		c.conn.Close()
+		_ = c.conn.Close()
 	}()
 	c.conn.SetReadLimit(1024)
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	for {
 		if _, _, err := c.conn.ReadMessage(); err != nil {
 			return
 		}
 		// Clients are read-only; any inbound message just resets the deadline.
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	}
 }
 
@@ -102,12 +102,12 @@ func (h *Hub) writeLoop(c *client) {
 			if !ok {
 				return
 			}
-			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

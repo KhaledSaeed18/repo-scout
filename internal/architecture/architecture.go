@@ -37,7 +37,6 @@ type Report struct {
 }
 
 type builder struct {
-	repoID     uint
 	fileSet    map[string]bool
 	dirSet     map[string]bool
 	module     string // go module name, when present
@@ -88,12 +87,12 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 	}
 
 	report := Report{
-		Edges:      b.edges,
-		Unresolved: b.unresolved,
-		EntryPoints: []string{},
-		DeadFiles:   []string{},
-		Folders:     []string{},
-		Cycles:      [][]string{},
+		Edges:         b.edges,
+		Unresolved:    b.unresolved,
+		EntryPoints:   []string{},
+		DeadFiles:     []string{},
+		Folders:       []string{},
+		Cycles:        [][]string{},
 		UnusedModules: []string{},
 	}
 
@@ -143,13 +142,13 @@ func ReportFromGraph(edges []Edge, files []models.File) Report {
 		dirSet[folderOf(f.Path)] = true
 	}
 	report := Report{
-		Edges:        edges,
-		EntryPoints:  []string{},
-		DeadFiles:    []string{},
-		Folders:      []string{},
-		Cycles:       [][]string{},
+		Edges:         edges,
+		EntryPoints:   []string{},
+		DeadFiles:     []string{},
+		Folders:       []string{},
+		Cycles:        [][]string{},
 		UnusedModules: []string{},
-		Unresolved:   []Edge{},
+		Unresolved:    []Edge{},
 	}
 	fileToFiles := map[string][]string{}
 	for _, e := range edges {
@@ -411,11 +410,11 @@ func entryPoints(fileSet map[string]bool) []string {
 		if i := strings.LastIndex(base, "/"); i >= 0 {
 			base = base[i+1:]
 		}
-		switch {
-		case base == "main.go", base == "main.rs", base == "main.py", base == "__main__.py",
-			base == "index.ts", base == "index.tsx", base == "index.js", base == "index.jsx",
-			base == "app.ts", base == "app.tsx", base == "app.js", base == "app.jsx",
-			base == "server.ts", base == "server.js":
+		switch base {
+		case "main.go", "main.rs", "main.py", "__main__.py",
+			"index.ts", "index.tsx", "index.js", "index.jsx",
+			"app.ts", "app.tsx", "app.js", "app.jsx",
+			"server.ts", "server.js":
 			out = append(out, f)
 		}
 	}

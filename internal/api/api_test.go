@@ -45,8 +45,12 @@ func newTestServer(t *testing.T) (*httptest.Server, *Server) {
 	write(t, root, "main.go", "package main\n\nimport \"example.com/demo/util\"\n\nfunc main() {}\n")
 	write(t, root, "util/util.go", "package util\n\nfunc Help() {}\n")
 	write(t, root, "go.mod", "module example.com/demo\n\ngo 1.22\n")
-	exec.Command("git", "-C", root, "init", "-q", "-b", "main", ".").Run()
-	exec.Command("git", "-C", root, "add", ".").Run()
+	if err := exec.Command("git", "-C", root, "init", "-q", "-b", "main", ".").Run(); err != nil {
+		t.Fatal(err)
+	}
+	if err := exec.Command("git", "-C", root, "add", ".").Run(); err != nil {
+		t.Fatal(err)
+	}
 	gitCommit(t, root, "2024-02-01T10:00:00", "initial commit")
 
 	repoStore := database.NewSettingsStore(db)
@@ -92,7 +96,7 @@ func get(t *testing.T, ts *httptest.Server, path string) (*http.Response, map[st
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var body map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&body)
 	return resp, body

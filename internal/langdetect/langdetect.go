@@ -40,25 +40,6 @@ func Detect(path string) *Lang {
 	return nil
 }
 
-func (l *Lang) matches(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	if ext != "" {
-		ext = ext[1:]
-	}
-	for _, e := range l.Extensions {
-		if e == ext {
-			return true
-		}
-	}
-	base := filepath.Base(path)
-	for _, f := range l.Filenames {
-		if f == base {
-			return true
-		}
-	}
-	return false
-}
-
 // Count measures lines of code, comments, and blanks for the language. It
 // tracks multi-line block comments and counts a line with code before a block
 // comment opener as code.

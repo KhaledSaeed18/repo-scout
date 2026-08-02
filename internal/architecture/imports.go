@@ -6,7 +6,6 @@ import (
 )
 
 var (
-	goImportRe   = regexp.MustCompile(`(?m)^\s*import\s+`)
 	jsImportRe   = regexp.MustCompile(`(?:import\s+(?:[^"']*?\s+from\s+)?["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)|require\(\s*["']([^"']+)["']\s*\))`)
 	pyImportRe   = regexp.MustCompile(`(?m)^\s*(?:import|from)\s+([\w.]+)`)
 	rustUseRe    = regexp.MustCompile(`\buse\s+([^;{]+)`)

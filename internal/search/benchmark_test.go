@@ -31,7 +31,9 @@ func seededStore(tb testing.TB, files int) (*search.Store, uint) {
 	for i := 0; i < files; i++ {
 		rel := fmt.Sprintf("src/file%04d.go", i)
 		content := fmt.Sprintf("package src\n\n// needle marker %d\nfunc Handler%d() {\n}\n", i, i)
-		os.WriteFile(filepath.Join(root, rel), []byte(content), 0o644)
+		if err := os.WriteFile(filepath.Join(root, rel), []byte(content), 0o644); err != nil {
+			tb.Fatal(err)
+		}
 		rows = append(rows, models.File{ID: uint(i + 1), Path: rel, Language: "Go"})
 	}
 	if err := store.Reindex(context.Background(), 1, root, rows, nil); err != nil {

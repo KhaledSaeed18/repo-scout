@@ -61,7 +61,7 @@ func TestManagerLifecycle(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go m.Start(ctx)
+	go func() { _ = m.Start(ctx) }()
 	defer cancel()
 
 	job, err := m.Enqueue(1, "scan")
@@ -141,7 +141,7 @@ func TestManagerEnqueueCompletion(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go m.Start(ctx)
+	go func() { _ = m.Start(ctx) }()
 	defer cancel()
 
 	job, err := m.Enqueue(1, "scan")
