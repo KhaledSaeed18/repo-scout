@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"gorm.io/gorm"
@@ -49,15 +50,22 @@ func write(t *testing.T, root, rel, content string) {
 	}
 }
 
-// reporter captures progress for assertions.
+// reporter captures progress for assertions. Scan stages report from
+// multiple worker goroutines, so it must be safe for concurrent use, same
+// as the real jobs.Reporter implementation.
 type reporter struct {
+	mu      sync.Mutex
 	lastMsg string
 }
 
-func (r *reporter) SetTotal(n int)                       {}
-func (r *reporter) SetProgress(f float64)                {}
-func (r *reporter) Inc(n int)                            {}
-func (r *reporter) SetMessage(msg string)                { r.lastMsg = msg }
+func (r *reporter) SetTotal(n int)        {}
+func (r *reporter) SetProgress(f float64) {}
+func (r *reporter) Inc(n int)             {}
+func (r *reporter) SetMessage(msg string) {
+	r.mu.Lock()
+	r.lastMsg = msg
+	r.mu.Unlock()
+}
 func (r *reporter) Checkpoint(ctx context.Context) error { return nil }
 
 func makeFixture(t *testing.T) string {
