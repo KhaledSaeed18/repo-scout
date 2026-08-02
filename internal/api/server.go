@@ -37,7 +37,6 @@ func New(db *gorm.DB, mgr *jobs.Manager, hub *ws.Hub, settings *database.Setting
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
