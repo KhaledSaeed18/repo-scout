@@ -6,6 +6,7 @@
   <img src="https://shieldcn.dev/badge/backend-Go%20%2B%20SQLite-cyan.svg?variant=secondary&logo=go&logoColor=ffffff" alt="Backend: Go + SQLite" />
   <img src="https://shieldcn.dev/badge/frontend-React%20%2B%20Vite-cyan.svg?variant=secondary&logo=react&logoColor=ffffff" alt="Frontend: React + Vite" />
   <img src="https://shieldcn.dev/badge/mode-local--first-cyan.svg?variant=secondary" alt="Mode: local-first" />
+  <a href="https://github.com/KhaledSaeed18/repo-scout/actions/workflows/ci.yml"><img src="https://shieldcn.dev/github/ci/KhaledSaeed18/repo-scout.svg?workflow=ci.yml&branch=main&variant=secondary" alt="CI status" /></a>
 </p>
 
 <strong>Point it at a folder. See the whole codebase.</strong>

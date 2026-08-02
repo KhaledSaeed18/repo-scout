@@ -19,7 +19,8 @@ From the repository root:
 - `make backend` — build/run the Go API.
 - `make frontend` — run the Vite dev server.
 - `make test` — Go tests, frontend typecheck + tests.
-- `make lint` — go vet, golangci-lint (if present), frontend eslint.
+- `make lint` — go vet, golangci-lint (if present locally; always enforced in CI),
+  frontend eslint.
 - `make build` — production builds for both halves.
 
 Frontend commands run with `pnpm --prefix frontend run ...`.
@@ -65,3 +66,14 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
 3. Frontend typecheck passes (`tsc --noEmit`).
 4. Change is committed as its own micro-commit with a conventional message.
 5. The feature/unit is pushed to `origin main` once complete.
+6. CI (`.github/workflows/ci.yml`) is green on `main`.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push and pull request against `main`:
+
+- **Backend**: `gofmt` check, `go vet`, `golangci-lint` (config in
+  `.golangci.yml`), `go build ./...`, `go test ./... -race` with coverage.
+- **Frontend**: `pnpm install --frozen-lockfile`, typecheck, lint, test, build.
+
+Both must pass before merging.
