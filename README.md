@@ -88,7 +88,7 @@ mid-scan resumes cleanly instead of leaving a half-written repository behind.
 ## Requirements
 
 - Go 1.26+
-- Node 20+ and pnpm 11+
+- Node 22.13+ and pnpm 11+
 - `git` on PATH (used for history analysis)
 - Make
 
