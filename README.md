@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://shieldcn.dev/header/graph.svg?title=Repo%20Scout&subtitle=Local-first%20analytics%20for%20any%20Git%20repository&theme=cyan&logo=https%3A%2F%2Fraw.githubusercontent.com%2FKhaledSaeed18%2Frepo-scout%2Fmain%2Ffrontend%2Fpublic%2Frepo-scout.png&size=lg&align=center" width="820" alt="Repo Scout" />
+<img src="https://shieldcn.dev/header/graph.svg?title=Repo%20Scout&subtitle=Local-first%20analytics%20for%20any%20Git%20repository&theme=cyan&logo=https%3A%2F%2Fraw.githubusercontent.com%2FKhaledSaeed18%2Frepo-scout%2Fmain%2Ffrontend%2Fpublic%2Fapple-touch-icon.png&size=lg&align=center" width="820" alt="Repo Scout" />
 
 <p>
   <img src="https://shieldcn.dev/badge/backend-Go%20%2B%20SQLite-cyan.svg?variant=secondary&logo=go&logoColor=ffffff" alt="Backend: Go + SQLite" />
