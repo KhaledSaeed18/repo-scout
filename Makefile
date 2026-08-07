@@ -21,7 +21,7 @@ test:
 	go test ./...
 	cd frontend && pnpm run typecheck && pnpm run test
 
-## lint: go vet, golangci-lint (if present), frontend eslint
+## lint: go vet, golangci-lint (if present), frontend oxlint
 lint:
 	go vet ./...
 	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run ./...; else echo "golangci-lint not found; skipping"; fi

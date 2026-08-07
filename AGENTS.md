@@ -20,7 +20,7 @@ From the repository root:
 - `make frontend` — run the Vite dev server.
 - `make test` — Go tests, frontend typecheck + tests.
 - `make lint` — go vet, golangci-lint (if present locally; always enforced in CI),
-  frontend eslint.
+  frontend oxlint.
 - `make build` — production builds for both halves.
 
 Frontend commands run with `pnpm --prefix frontend run ...`.
@@ -33,7 +33,6 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
 - `frontend/` — the React app. Pages in `frontend/src/pages`, UI primitives in
   `frontend/src/components/ui` (shadcn). API + WebSocket clients in
   `frontend/src/lib`.
-- `testdata/` — git repository fixtures used by integration tests.
 
 ## Conventions
 
