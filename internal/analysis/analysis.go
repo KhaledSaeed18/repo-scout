@@ -268,28 +268,14 @@ func (r *Runner) applyFileGitInfo(repoID uint, files map[string]*gitrepo.FileHis
 		}
 		updates = append(updates, f)
 		if len(updates) >= batch {
-			if err := r.db.Transaction(func(tx *gorm.DB) error {
-				for _, u := range updates {
-					if err := tx.Model(&u).Select("author", "commits", "first_commit_at", "last_commit_at").Updates(u).Error; err != nil {
-						return err
-					}
-				}
-				return nil
-			}); err != nil {
+			if err := r.db.Save(&updates).Error; err != nil {
 				return err
 			}
 			updates = updates[:0]
 		}
 	}
 	if len(updates) > 0 {
-		return r.db.Transaction(func(tx *gorm.DB) error {
-			for _, u := range updates {
-				if err := tx.Model(&u).Select("author", "commits", "first_commit_at", "last_commit_at").Updates(u).Error; err != nil {
-					return err
-				}
-			}
-			return nil
-		})
+		return r.db.Save(&updates).Error
 	}
 	return nil
 }
