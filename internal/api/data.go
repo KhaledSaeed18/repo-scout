@@ -23,7 +23,10 @@ func (s *Server) handleHeatmap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var emails []string
-	s.db.Model(&models.Contributor{}).Where("repo_id = ?", id).Pluck("email", &emails)
+	if err := s.db.Model(&models.Contributor{}).Where("repo_id = ?", id).Pluck("email", &emails).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "heatmap emails: "+err.Error())
+		return
+	}
 	streaks := make([]gitanalytics.StreaksResult, 0, len(emails))
 	for _, email := range emails {
 		sr, err := gitanalytics.Streaks(s.db, id, email)
