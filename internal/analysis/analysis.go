@@ -128,8 +128,12 @@ func (r *Runner) gitMeta(ctx context.Context, repo *models.Repository) error {
 	}).Error; err != nil {
 		return err
 	}
-	r.db.Where("repo_id = ?", repo.ID).Delete(&models.Branch{})
-	r.db.Where("repo_id = ?", repo.ID).Delete(&models.Tag{})
+	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Branch{}).Error; err != nil {
+		return err
+	}
+	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Tag{}).Error; err != nil {
+		return err
+	}
 	for i := range branches {
 		branches[i].RepoID = repo.ID
 	}
@@ -204,8 +208,12 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 	}
 
 	// Contributors rollup.
-	r.db.Where("repo_id = ?", repo.ID).Delete(&models.Contributor{})
-	r.db.Where("repo_id = ?", repo.ID).Delete(&models.FileOwnership{})
+	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Contributor{}).Error; err != nil {
+		return err
+	}
+	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.FileOwnership{}).Error; err != nil {
+		return err
+	}
 	if len(contrib) > 0 {
 		rows := make([]models.Contributor, 0, len(contrib))
 		for _, cs := range contrib {
@@ -325,7 +333,9 @@ func (r *Runner) importGraph(ctx context.Context, repo *models.Repository, read 
 	if err != nil {
 		return err
 	}
-	r.db.Where("repo_id = ?", repo.ID).Delete(&models.ImportEdge{})
+	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.ImportEdge{}).Error; err != nil {
+		return err
+	}
 	if len(rep.Edges) > 0 {
 		edges := make([]models.ImportEdge, 0, len(rep.Edges))
 		for _, e := range rep.Edges {
