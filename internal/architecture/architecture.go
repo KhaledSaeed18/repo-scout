@@ -273,6 +273,12 @@ func resolveJS(fromFile, spec string, b *builder) []target {
 		base + ".mjs", base + ".cjs",
 		base + "/index.ts", base + "/index.tsx", base + "/index.js", base + "/index.jsx",
 	}
+	// TypeScript files often import with .js extensions (e.g. import './foo.js'
+	// but the actual file is foo.ts). Try stripping the extension.
+	if strings.HasSuffix(base, ".js") {
+		stripped := strings.TrimSuffix(base, ".js")
+		candidates = append(candidates, stripped+".ts", stripped+".tsx")
+	}
 	for _, c := range candidates {
 		if b.fileSet[c] {
 			return []target{{path: c, resolved: true}}

@@ -139,6 +139,27 @@ func TestJSImportGraph(t *testing.T) {
 	}
 }
 
+func TestJSImportGraphJsToTs(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "src/index.ts", `import { helper } from "./lib/helper.js";`)
+	write(t, root, "src/lib/helper.ts", "export const helper = 1;\n")
+
+	files := fileList(root)
+	rep, err := Build(root, files, readAll(root))
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	found := false
+	for _, e := range rep.Edges {
+		if e.From == "src/index.ts" && e.To == "src/lib/helper.ts" && e.Resolved {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected src/index.ts -> src/lib/helper.ts via .js->.ts, got %+v", rep.Edges)
+	}
+}
+
 func TestUnusedModules(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "go.mod", "module example.com/demo\n")
