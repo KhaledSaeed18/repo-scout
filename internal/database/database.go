@@ -3,10 +3,12 @@
 package database
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -15,6 +17,23 @@ import (
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
 )
+
+// silentLogger wraps GORM's logger to suppress expected "record not found"
+// errors that flood startup and idle workers.
+type silentLogger struct {
+	logger.Interface
+}
+
+func (l silentLogger) Trace(_ context.Context, begin time.Time, fc func() (string, int64), err error) {
+	if err == gorm.ErrRecordNotFound {
+		return
+	}
+	l.Interface.Trace(context.Background(), begin, fc, err)
+}
+
+func (l silentLogger) LogMode(level logger.LogLevel) logger.Interface {
+	return silentLogger{Interface: l.Interface.LogMode(level)}
+}
 
 // Open connects to the SQLite database at path, enabling WAL mode and foreign
 // keys. ":memory:" is supported for tests.
@@ -25,7 +44,7 @@ func Open(path string) (*gorm.DB, error) {
 		}
 	}
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: silentLogger{Interface: logger.Default.LogMode(logger.Warn)},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
