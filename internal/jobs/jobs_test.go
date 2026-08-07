@@ -56,8 +56,7 @@ func (b *blockingRunner) Run(ctx context.Context, repoID, jobID uint, rep Report
 func TestManagerLifecycle(t *testing.T) {
 	db := testDB(t)
 	br := &blockingRunner{started: make(chan struct{}, 1), checkpoint: make(chan struct{})}
-	m := New(db, br, func() config.Settings { return config.Defaults() }, nil)
-	m.workerCount = 1
+	m := New(db, br, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -136,8 +135,7 @@ func TestManagerRecoversInterrupted(t *testing.T) {
 
 func TestManagerEnqueueCompletion(t *testing.T) {
 	db := testDB(t)
-	m := New(db, &doneRunner{}, func() config.Settings { return config.Defaults() }, nil)
-	m.workerCount = 1
+	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

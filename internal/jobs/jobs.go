@@ -47,11 +47,10 @@ type EventSink interface {
 
 // Manager owns the job queue and worker pool.
 type Manager struct {
-	db          *gorm.DB
-	runner      Runner
-	settings    func() config.Settings
-	eventSink   EventSink
-	workerCount int
+	db        *gorm.DB
+	runner    Runner
+	settings  func() config.Settings
+	eventSink EventSink
 
 	mu     sync.Mutex
 	active map[uint]*activeJob
@@ -71,13 +70,12 @@ type activeJob struct {
 // New builds a Manager. settings and eventSink may be nil (defaults used).
 func New(db *gorm.DB, runner Runner, settings func() config.Settings, sink EventSink) *Manager {
 	return &Manager{
-		db:          db,
-		runner:      runner,
-		settings:    settings,
-		eventSink:   sink,
-		workerCount: 0,
-		active:      map[uint]*activeJob{},
-		wake:        make(chan struct{}, 1),
+		db:        db,
+		runner:    runner,
+		settings:  settings,
+		eventSink: sink,
+		active:    map[uint]*activeJob{},
+		wake:      make(chan struct{}, 1),
 	}
 }
 
@@ -92,9 +90,6 @@ func (m *Manager) Start(ctx context.Context) error {
 		if c := m.settings().WorkerCount; c > 0 {
 			n = c
 		}
-	}
-	if m.workerCount > 0 {
-		n = m.workerCount
 	}
 	m.baseCtx = ctx
 	var wg sync.WaitGroup
