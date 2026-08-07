@@ -31,11 +31,17 @@ function layout(edges: { from: string; to: string }[]): {
   }
   const depthOf = (node: string): number => {
     let depth = 0
-    const visit = (n: string, d: number) => {
+    const visit = (n: string, d: number, path: Set<string>) => {
       if (d > depth) depth = d
-      for (const next of adj.get(n) ?? []) visit(next, d + 1)
+      for (const next of adj.get(n) ?? []) {
+        if (!path.has(next)) {
+          const nextPath = new Set(path)
+          nextPath.add(next)
+          visit(next, d + 1, nextPath)
+        }
+      }
     }
-    visit(node, 0)
+    visit(node, 0, new Set([node]))
     return depth
   }
   const byDepth = new Map<number, string[]>()
