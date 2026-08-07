@@ -25,6 +25,10 @@ func (s *Server) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st = st.WithDefaults()
+	if err := st.Validate(); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid settings: "+err.Error())
+		return
+	}
 	if err := s.settings.Save(st); err != nil {
 		writeErr(w, http.StatusInternalServerError, "save settings: "+err.Error())
 		return
