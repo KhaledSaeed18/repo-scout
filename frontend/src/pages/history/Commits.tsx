@@ -131,17 +131,17 @@ function CommitsPage({ repo }: { repo: Repository }) {
           </TabsList>
           <Input
             value={filter}
-            onChange={(e) => setFilter(e.target.value.trim())}
+            onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter by message, author or hash"
             aria-label="Filter commits"
             className="mb-2 w-72"
           />
         </div>
         <TabsContent value="newest">
-          <Newest repoId={repo.id} filter={filter} />
+          <Newest repoId={repo.id} filter={filter.trim()} />
         </TabsContent>
         <TabsContent value="largest">
-          <Largest repoId={repo.id} filter={filter} />
+          <Largest repoId={repo.id} filter={filter.trim()} />
         </TabsContent>
       </Tabs>
     </>
