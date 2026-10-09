@@ -4,6 +4,7 @@ import {
   FolderGit2,
   FolderTree,
   Gauge,
+  GitBranch,
   GitCommitHorizontal,
   Map as MapIcon,
   Package,
@@ -32,7 +33,8 @@ const groups: { label?: string; items: NavItem[] }[] = [
     items: [
       { to: '/activity', label: 'Activity', icon: CalendarDays },
       { to: '/commits', label: 'Commits', icon: GitCommitHorizontal },
-      { to: '/git', label: 'Git history', icon: Users },
+      { to: '/contributors', label: 'Contributors', icon: Users },
+      { to: '/git', label: 'Branches & tags', icon: GitBranch },
     ],
   },
   {

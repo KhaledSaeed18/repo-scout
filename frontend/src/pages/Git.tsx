@@ -1,4 +1,4 @@
-import { Activity, Flame, FolderGit2, GitBranch, Tag, Users } from 'lucide-react'
+import { Activity, Flame, FolderGit2, GitBranch, Tag } from 'lucide-react'
 import { useState } from 'react'
 import {
   Bar,
@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
-import { useContributors, useHeatmap, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
+import { useHeatmap, useRepo, useBranches, useTags } from '../lib/api'
 import { useRepoContext } from '@/lib/repo-context'
 import RepoSelector from '../components/RepoSelector'
 
@@ -137,87 +137,6 @@ function StreaksView({ streaks }: { streaks: import('../lib/types').StreaksResul
   )
 }
 
-function ContributorsChart({
-  contributors,
-}: {
-  contributors: import('../lib/types').Contributor[]
-}) {
-  const data = contributors.slice(0, 10).map((c) => ({
-    name: c.name || c.email,
-    commits: c.commits,
-  }))
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Top contributors</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data} layout="vertical" margin={{ left: 24 }}>
-            <XAxis type="number" stroke="var(--muted-foreground)" fontSize={12} />
-            <YAxis
-              type="category"
-              dataKey="name"
-              stroke="var(--muted-foreground)"
-              fontSize={11}
-              width={110}
-            />
-            <Tooltip
-              contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)' }}
-              labelStyle={{ color: 'var(--popover-foreground)' }}
-            />
-            <Bar dataKey="commits" fill="var(--chart-1)" radius={[0, 4, 4, 0]} isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  )
-}
-
-function OwnershipView({ repoId }: { repoId: number }) {
-  const { data, isLoading } = useOwnership(repoId)
-  if (isLoading) return <Spinner />
-  const ownership = data?.byAuthor ?? []
-  if (!ownership.length) {
-    return (
-      <Card>
-        <CardContent>
-          <EmptyState icon={Users} title="No ownership data" />
-        </CardContent>
-      </Card>
-    )
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">
-          File ownership ({ownership.length} authors, {data?.total} files)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Author</TableHead>
-              <TableHead>Files</TableHead>
-              <TableHead>Share</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {ownership.map((o) => (
-              <TableRow key={o.author}>
-                <TableCell>{o.author}</TableCell>
-                <TableCell>{o.files}</TableCell>
-                <TableCell>{`${(o.share * 100).toFixed(1)}%`}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
-
 function BranchesTagsView({ repoId }: { repoId: number }) {
   const { data: branchesData, isLoading: branchesLoading } = useBranches(repoId)
   const { data: tagsData, isLoading: tagsLoading } = useTags(repoId)
@@ -305,47 +224,9 @@ function ActivityTab({ repoId }: { repoId: number }) {
   )
 }
 
-function ContributorsTab({ repoId }: { repoId: number }) {
-  const { data, isLoading } = useContributors(repoId)
-  if (isLoading) return <Spinner />
-  const contributors = data?.contributors ?? []
-  if (!contributors.length) return <EmptyState icon={Users} title="No contributors" />
-  return (
-    <div className="flex flex-col gap-4">
-      <ContributorsChart contributors={contributors} />
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Commits</TableHead>
-              <TableHead>Insertions</TableHead>
-              <TableHead>Deletions</TableHead>
-              <TableHead>First commit</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {contributors.map((c) => (
-              <TableRow key={c.email}>
-                <TableCell>{c.name}</TableCell>
-                <TableCell>{c.email}</TableCell>
-                <TableCell>{c.commits}</TableCell>
-                <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
-                <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
-                <TableCell>{new Date(c.firstCommitAt).toLocaleDateString()}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  )
-}
-
 export default function Git() {
   const { repoId } = useRepoContext()
-  const [tab, setTab] = useState<'activity' | 'contributors' | 'ownership' | 'branches-tags'>('activity')
+  const [tab, setTab] = useState<'activity' | 'branches-tags'>('activity')
   const repo = useRepo(repoId).data
   if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
   return (
@@ -357,13 +238,9 @@ export default function Git() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full justify-start">
           <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="contributors">Contributors</TabsTrigger>
-          <TabsTrigger value="ownership">Ownership</TabsTrigger>
           <TabsTrigger value="branches-tags">Branches & Tags</TabsTrigger>
         </TabsList>
         <TabsContent value="activity"><ActivityTab repoId={repoId} /></TabsContent>
-        <TabsContent value="contributors"><ContributorsTab repoId={repoId} /></TabsContent>
-        <TabsContent value="ownership"><OwnershipView repoId={repoId} /></TabsContent>
         <TabsContent value="branches-tags"><BranchesTagsView repoId={repoId} /></TabsContent>
       </Tabs>
     </div>
