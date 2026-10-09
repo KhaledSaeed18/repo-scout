@@ -177,3 +177,23 @@ func TestUnusedModules(t *testing.T) {
 		t.Fatalf("expected 1 unused module, got %+v", rep.UnusedModules)
 	}
 }
+
+func TestNonCodeFilesAreNotJudged(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "go.mod", "module example.com/demo\n")
+	write(t, root, "main.go", "package main\n")
+	write(t, root, "README.md", "# demo\n")
+	write(t, root, ".github/workflows/ci.yml", "on: push\n")
+	write(t, root, "docs/guide.md", "guide\n")
+
+	rep, err := Build(root, fileList(root), readAll(root))
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if len(rep.DeadFiles) != 0 {
+		t.Fatalf("documentation and config files cannot import anything; got dead files %v", rep.DeadFiles)
+	}
+	if len(rep.UnusedModules) != 0 {
+		t.Fatalf("folders without source code are not modules; got %v", rep.UnusedModules)
+	}
+}

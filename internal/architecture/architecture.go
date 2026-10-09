@@ -86,48 +86,10 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 		}
 	}
 
-	report := Report{
-		Edges:         b.edges,
-		Unresolved:    b.unresolved,
-		EntryPoints:   []string{},
-		DeadFiles:     []string{},
-		Folders:       []string{},
-		Cycles:        [][]string{},
-		UnusedModules: []string{},
+	report := ReportFromGraph(b.edges, files)
+	if b.unresolved != nil {
+		report.Unresolved = b.unresolved
 	}
-
-	fileToFiles := map[string][]string{}
-	for _, e := range report.Edges {
-		fileToFiles[e.From] = append(fileToFiles[e.From], e.To)
-	}
-
-	report.EntryPoints = entryPoints(b.fileSet)
-	report.DeadFiles = deadFiles(b.fileSet, b.dirSet, report.EntryPoints, fileToFiles)
-	report.Folders = sortedKeys(b.dirSet)
-
-	folderGraph := buildFolderGraph(report.Edges, b.dirSet)
-	report.Cycles = tarjanCycles(folderGraph)
-	report.UnusedModules = unusedModules(b.dirSet, folderGraph, report.EntryPoints)
-	if report.EntryPoints == nil {
-		report.EntryPoints = []string{}
-	}
-	if report.DeadFiles == nil {
-		report.DeadFiles = []string{}
-	}
-	if report.Folders == nil {
-		report.Folders = []string{}
-	}
-	if report.Cycles == nil {
-		report.Cycles = [][]string{}
-	}
-	if report.UnusedModules == nil {
-		report.UnusedModules = []string{}
-	}
-	if report.Unresolved == nil {
-		report.Unresolved = []Edge{}
-	}
-	sort.Strings(report.DeadFiles)
-	sort.Strings(report.UnusedModules)
 	return report, nil
 }
 
@@ -135,9 +97,14 @@ func Build(root string, files []models.File, read func(rel string) (string, erro
 // file list, without re-reading file contents. It is used by the API layer to
 // serve architecture data on demand.
 func ReportFromGraph(edges []Edge, files []models.File) Report {
+	// Only source files in languages with import analysis can be judged
+	// dead or unused; docs, config and data files never import anything.
 	fileSet := map[string]bool{}
 	dirSet := map[string]bool{}
 	for _, f := range files {
+		if !analyzable(f.Language) {
+			continue
+		}
 		fileSet[f.Path] = true
 		dirSet[folderOf(f.Path)] = true
 	}
@@ -181,6 +148,12 @@ func ReportFromGraph(edges []Edge, files []models.File) Report {
 	sort.Strings(report.DeadFiles)
 	sort.Strings(report.UnusedModules)
 	return report
+}
+
+// analyzable reports whether imports are extracted for the language.
+func analyzable(lang string) bool {
+	_, ok := extractors[lang]
+	return ok
 }
 
 func moduleFromGoMod(content string) string {
