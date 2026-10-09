@@ -34,7 +34,7 @@ const groups: { label?: string; items: NavItem[] }[] = [
       { to: '/activity', label: 'Activity', icon: CalendarDays },
       { to: '/commits', label: 'Commits', icon: GitCommitHorizontal },
       { to: '/contributors', label: 'Contributors', icon: Users },
-      { to: '/git', label: 'Branches & tags', icon: GitBranch },
+      { to: '/branches', label: 'Branches & tags', icon: GitBranch },
     ],
   },
   {

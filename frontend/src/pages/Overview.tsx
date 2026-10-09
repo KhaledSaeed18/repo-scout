@@ -64,8 +64,8 @@ function Header({ repo }: { repo: Repository }) {
       <div className="mb-2 flex flex-wrap divide-x border-y">
         <Figure value={repo.totalCode} label="lines of code" to="/metrics" />
         <Figure value={repo.fileCount} label="files" to="/files" />
-        <Figure value={repo.commitCount} label="commits" to="/git" />
-        <Figure value={repo.contributorCount} label={repo.contributorCount === 1 ? 'contributor' : 'contributors'} to="/git" />
+        <Figure value={repo.commitCount} label="commits" to="/commits" />
+        <Figure value={repo.contributorCount} label={repo.contributorCount === 1 ? 'contributor' : 'contributors'} to="/contributors" />
         <Figure value={repo.dependencyCount} label="dependencies" to="/dependencies" />
         <Figure value={repo.dupGroupCount} label="duplicate blocks" to="/duplicates" />
       </div>
@@ -97,8 +97,8 @@ function Activity({ repoId }: { repoId: number }) {
     <Section
       title="Commit activity"
       actions={
-        <Link to="/git" className="text-sm text-primary hover:underline">
-          Open history
+        <Link to="/activity" className="text-sm text-primary hover:underline">
+          Open activity
         </Link>
       }
     >
@@ -160,7 +160,7 @@ function Contributors({ repoId }: { repoId: number }) {
       title="Contributors"
       description="By number of commits."
       actions={
-        <Link to="/git" className="text-sm text-primary hover:underline">
+        <Link to="/contributors" className="text-sm text-primary hover:underline">
           Everyone
         </Link>
       }

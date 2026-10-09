@@ -9,8 +9,8 @@ import Overview from './pages/Overview'
 import Activity from './pages/history/Activity'
 import Commits from './pages/history/Commits'
 import Contributors from './pages/history/Contributors'
+import Refs from './pages/history/Refs'
 import Repositories from './pages/Repositories'
-import Git from './pages/Git'
 import Files from './pages/Files'
 import Search from './pages/Search'
 import Duplicates from './pages/Duplicates'
@@ -42,7 +42,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/activity" element={<Activity />} />
               <Route path="/commits" element={<Commits />} />
               <Route path="/contributors" element={<Contributors />} />
-              <Route path="/git" element={<Git />} />
+              <Route path="/branches" element={<Refs />} />
+              <Route path="/git" element={<Navigate to="/activity" replace />} />
               <Route path="/files" element={<Files />} />
               <Route path="/search" element={<Search />} />
               <Route path="/duplicates" element={<Duplicates />} />
