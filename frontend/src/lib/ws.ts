@@ -2,45 +2,53 @@ import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { wsUrl } from './api'
 
+/** Query keys that do not depend on scan results. */
+const scanIndependent = new Set(['settings', 'browse'])
+
 /**
- * Connects to the backend WebSocket once and invalidates TanStack Query keys
- * whenever a job or repository event arrives. The reconciliation is cheap
- * because React Query dedupes overlapping refetches.
+ * Connects to the backend WebSocket and reconciles TanStack Query caches as
+ * events arrive. Job events refresh job and repository status; repository
+ * events refresh every scan-derived view, since a finished scan changes them
+ * all. React Query dedupes overlapping refetches, so this stays cheap.
  */
 export function useLiveUpdates() {
   const qc = useQueryClient()
   useEffect(() => {
     let closed = false
     let ws: WebSocket | null = null
-    let retry: ReturnType<typeof setTimeout> | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
 
     const connect = () => {
       if (closed) return
       ws = new WebSocket(wsUrl())
       ws.onmessage = (event) => {
+        let type: string
         try {
-          const msg = JSON.parse(event.data) as { type: string }
-          if (msg.type.startsWith('job.')) {
-            void qc.invalidateQueries({ queryKey: ['jobs'] })
-          }
-          if (msg.type.startsWith('repository.')) {
-            void qc.invalidateQueries({ queryKey: ['repos'] })
-            void qc.invalidateQueries({ queryKey: ['repo'] })
-          }
+          type = (JSON.parse(event.data) as { type: string }).type
         } catch {
-          /* ignore malformed frames */
+          return
+        }
+        if (type.startsWith('job.')) {
+          void qc.invalidateQueries({ queryKey: ['jobs'] })
+          void qc.invalidateQueries({ queryKey: ['repos'] })
+        }
+        if (type.startsWith('repository.')) {
+          void qc.invalidateQueries({
+            predicate: (q) => !scanIndependent.has(String(q.queryKey[0])),
+          })
         }
       }
       ws.onclose = () => {
-        if (!closed) retry = setTimeout(connect, 2000)
+        if (!closed) timer = setTimeout(connect, 2000)
       }
       ws.onerror = () => ws?.close()
     }
 
-    connect()
+    // Deferred so a StrictMode mount/unmount cycle never opens a socket.
+    timer = setTimeout(connect, 0)
     return () => {
       closed = true
-      if (retry) clearTimeout(retry)
+      if (timer) clearTimeout(timer)
       ws?.close()
     }
   }, [qc])
