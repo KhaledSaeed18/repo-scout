@@ -189,8 +189,15 @@ func TestRepositoryEndpoints(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("export: %d", resp.StatusCode)
 	}
-	if ct := resp.Header.Get("Content-Disposition"); !strings.Contains(ct, "files.csv") {
-		t.Fatalf("unexpected content disposition %q", ct)
+	if cd := resp.Header.Get("Content-Disposition"); cd != "attachment; filename=demo-files.csv" {
+		t.Fatalf("unexpected content disposition %q", cd)
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "text/csv; charset=utf-8" {
+		t.Fatalf("unexpected csv content type %q", ct)
+	}
+	resp, _ = get(t, ts, "/api/repositories/1/export?kind=commits&format=json")
+	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("unexpected json content type %q", ct)
 	}
 
 	resp, _ = get(t, ts, "/api/repositories/999")
