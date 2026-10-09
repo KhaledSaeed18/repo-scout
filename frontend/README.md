@@ -1,32 +1,49 @@
-# React + TypeScript + Vite
+# Repo Scout frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React app for Repo Scout. It talks to the Go API on `localhost:8080`
+through the Vite proxy (HTTP and the `/api/ws` WebSocket share one origin).
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+pnpm install
+pnpm run dev        # Vite dev server on :5173, proxies /api to :8080
+pnpm run typecheck  # tsc in strict mode
+pnpm run test       # Vitest unit tests for src/lib
+pnpm run lint       # oxlint
+pnpm run build      # typecheck + production build into dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+From the repository root, `make dev` runs the API and this app together.
+
+## Layout
+
+```
+src/
+├── main.tsx              # routes (pages are lazy-loaded)
+├── App.tsx               # shell: sidebar, mobile menu, page error boundary
+├── index.css             # design tokens for light and dark themes
+├── pages/
+│   ├── Overview.tsx
+│   ├── Repositories.tsx  # add, rescan, remove; scan history
+│   ├── Settings.tsx
+│   ├── history/          # Activity, Commits, Contributors, Branches & tags
+│   ├── code/             # Files, Search, Metrics, Duplicates
+│   └── structure/        # Architecture, Dependencies
+├── components/
+│   ├── layout.tsx        # PageHeader, Section
+│   ├── states.tsx        # Loading, ErrorNotice, Empty, QueryView
+│   ├── RequireRepo.tsx   # gate for pages that need a scanned repository
+│   └── ui/               # shadcn primitives (Base UI)
+└── lib/
+    ├── api.ts            # fetch client and TanStack Query hooks
+    ├── ws.ts             # live updates from the job WebSocket
+    ├── types.ts          # API contracts
+    └── *.ts / *.test.ts  # pure helpers with unit tests
+```
+
+## Design
+
+See "Interface design" in the repository's `AGENTS.md`. In short: tokens only,
+Barlow for text, JetBrains Mono for code, sections instead of card grids,
+sentence-case copy, and every page checked at 390px in both themes.
