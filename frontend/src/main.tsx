@@ -16,7 +16,7 @@ import Search from './pages/code/Search'
 import Duplicates from './pages/code/Duplicates'
 import Architecture from './pages/structure/Architecture'
 import Metrics from './pages/code/Metrics'
-import Dependencies from './pages/Dependencies'
+import Dependencies from './pages/structure/Dependencies'
 import Settings from './pages/Settings'
 
 const queryClient = new QueryClient({
