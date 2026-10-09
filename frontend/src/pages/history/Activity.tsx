@@ -21,6 +21,7 @@ function Calendar({ heatmap }: { heatmap: Heatmap }) {
   return (
     <Section
       title="Commit calendar"
+      description={range === latest ? 'The year leading up to the most recent commit.' : `Commits made in ${range}.`}
       actions={
         years.length > 1 && (
           <div role="group" aria-label="Calendar range" className="flex flex-wrap gap-1">
@@ -32,7 +33,7 @@ function Calendar({ heatmap }: { heatmap: Heatmap }) {
                 aria-pressed={range === y}
                 onClick={() => setRange(y)}
               >
-                {y === latest ? 'Last 12 months' : y}
+                {y === latest ? 'Latest year' : y}
               </Button>
             ))}
           </div>
