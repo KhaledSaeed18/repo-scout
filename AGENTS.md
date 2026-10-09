@@ -35,6 +35,8 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
   `frontend/src/components` (`layout.tsx`, `states.tsx`, `RequireRepo.tsx`), UI
   primitives in `frontend/src/components/ui` (shadcn). API + WebSocket clients
   and pure, unit-tested helpers in `frontend/src/lib`.
+- `brand/` — logo, icon and social preview sources (SVG) with `build.sh` to
+  render every PNG/ICO. Edit the SVGs, then rebuild; never hand-edit the PNGs.
 
 ## Conventions
 
@@ -65,6 +67,8 @@ The UI follows a "survey map" system. Keep new work inside it:
 - Copy is sentence case and plain. No all-caps labels, no "A · B" meta strings.
   Empty states say what to do next; errors say what failed.
 - Every page must work at 390px wide and in both themes.
+- The in-app logo is `BrandMark` (theme colors); follow `brand/README.md` for
+  any other use of the mark.
 
 ## Git rules
 
