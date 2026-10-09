@@ -276,3 +276,29 @@ func TestFinishedJobAnnouncesRepository(t *testing.T) {
 		t.Fatalf("announced the wrong repository: %+v", sink.repos[0])
 	}
 }
+
+func TestActionsDoNotOverwriteAFinishedJob(t *testing.T) {
+	// The worker has written the final status but not yet unregistered the job.
+	for _, action := range []string{"cancel", "pause"} {
+		db := testDB(t)
+		m := New(db, &doneRunner{}, nil, nil)
+		job := models.Job{RepoID: 1, Kind: "scan", Status: models.JobCompleted}
+		db.Create(&job)
+		m.active[job.ID] = &activeJob{cancel: func() {}, notify: make(chan struct{})}
+
+		var err error
+		if action == "cancel" {
+			err = m.Cancel(job.ID)
+		} else {
+			err = m.Pause(job.ID)
+		}
+		if err == nil {
+			t.Fatalf("%s: expected an error for a finished job", action)
+		}
+		var j models.Job
+		db.First(&j, job.ID)
+		if j.Status != models.JobCompleted {
+			t.Fatalf("%s: finished job was rewritten to %s and would hang", action, j.Status)
+		}
+	}
+}

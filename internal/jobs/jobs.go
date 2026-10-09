@@ -170,23 +170,20 @@ func (m *Manager) Pause(jobID uint) error {
 	if aj == nil {
 		return fmt.Errorf("job %d is not running", jobID)
 	}
+	// Only a running job can pause; the guard loses gracefully to a job that
+	// finished in the meantime instead of leaving it "paused" with no worker.
+	if err := m.transition(jobID, []string{models.JobRunning}, models.JobPaused, "paused"); err != nil {
+		return err
+	}
 	aj.mu.Lock()
 	aj.paused = true
 	aj.mu.Unlock()
-	if err := m.updateState(jobID, models.JobPaused, "paused"); err != nil {
-		return err
-	}
 	return nil
 }
 
-// Resume un-pauses a paused job.
 func (m *Manager) Resume(jobID uint) error {
-	var job models.Job
-	if err := m.db.First(&job, jobID).Error; err != nil {
+	if err := m.transition(jobID, []string{models.JobPaused}, models.JobRunning, "resumed"); err != nil {
 		return err
-	}
-	if job.Status != models.JobPaused {
-		return fmt.Errorf("job %d is not paused", jobID)
 	}
 	if aj := m.lookup(jobID); aj != nil {
 		aj.mu.Lock()
@@ -195,14 +192,9 @@ func (m *Manager) Resume(jobID uint) error {
 		aj.notify = make(chan struct{})
 		aj.mu.Unlock()
 	}
-	if err := m.updateState(jobID, models.JobRunning, "resumed"); err != nil {
-		return err
-	}
 	return nil
 }
 
-// Cancel stops a job. Queued jobs are cancelled immediately; running and
-// paused jobs are cancelled at the next checkpoint.
 func (m *Manager) Cancel(jobID uint) error {
 	// A queued job has no worker yet, so it can be finished directly. The
 	// status guard keeps this safe if a worker claims it at the same time.
@@ -229,33 +221,44 @@ func (m *Manager) Cancel(jobID uint) error {
 		}
 		return fmt.Errorf("job %d is %s and cannot be cancelled", jobID, job.Status)
 	}
+	// Record the intent before signalling, and only while the job is live:
+	// the worker's final write must always be the last one.
+	if err := m.transition(jobID, []string{models.JobRunning, models.JobPaused}, models.JobCancelling, "cancelling"); err != nil {
+		return err
+	}
 	aj.mu.Lock()
 	aj.paused = false
 	close(aj.notify)
 	aj.notify = make(chan struct{})
 	aj.mu.Unlock()
 	aj.cancel()
-	return m.updateState(jobID, models.JobCancelling, "cancelling")
+	return nil
+}
+
+// transition moves a job to status only if it is currently in one of from,
+// and broadcasts the change.
+func (m *Manager) transition(jobID uint, from []string, status, msg string) error {
+	res := m.db.Model(&models.Job{}).
+		Where("id = ? AND status IN ?", jobID, from).
+		Updates(map[string]any{"status": status, "message": msg, "updated_at": time.Now()})
+	if res.Error != nil {
+		return fmt.Errorf("update job %d: %w", jobID, res.Error)
+	}
+	var job models.Job
+	if err := m.db.First(&job, jobID).Error; err != nil {
+		return err
+	}
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("job %d is %s", jobID, job.Status)
+	}
+	m.broadcast(&job)
+	return nil
 }
 
 func (m *Manager) lookup(jobID uint) *activeJob {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.active[jobID]
-}
-
-func (m *Manager) updateState(jobID uint, status, msg string) error {
-	err := m.db.Model(&models.Job{}).
-		Where("id = ?", jobID).
-		Updates(map[string]any{"status": status, "message": msg, "updated_at": time.Now()}).Error
-	if err != nil {
-		return fmt.Errorf("update job %d: %w", jobID, err)
-	}
-	var job models.Job
-	if err := m.db.First(&job, jobID).Error; err == nil {
-		m.broadcast(&job)
-	}
-	return nil
 }
 
 func (m *Manager) worker(ctx context.Context) {
