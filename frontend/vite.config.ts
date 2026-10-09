@@ -8,7 +8,7 @@ import path from 'path'
 // sees matching Origin and Host headers.
 const proxy = {
   '/api': {
-    target: 'http://localhost:8080',
+    target: 'http://127.0.0.1:8080',
     ws: true,
   },
 }

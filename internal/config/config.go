@@ -16,7 +16,8 @@ type Runner struct {
 // back to sensible defaults.
 func FromEnv() Runner {
 	return Runner{
-		Addr:   env("REPO_SCOUT_ADDR", ":8080"),
+		// Loopback only: the API can list folders and read any repository on disk.
+		Addr:   env("REPO_SCOUT_ADDR", "127.0.0.1:8080"),
 		DBPath: env("REPO_SCOUT_DB", "data/reposcout.db"),
 	}
 }

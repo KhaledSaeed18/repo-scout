@@ -48,3 +48,14 @@ func TestValidateTheme(t *testing.T) {
 		t.Fatalf("expected system theme by default, got %q", Defaults().Theme)
 	}
 }
+
+func TestFromEnvListensOnLoopbackByDefault(t *testing.T) {
+	t.Setenv("REPO_SCOUT_ADDR", "")
+	if got := FromEnv().Addr; got != "127.0.0.1:8080" {
+		t.Fatalf("the API exposes local files; default must be loopback only, got %q", got)
+	}
+	t.Setenv("REPO_SCOUT_ADDR", "0.0.0.0:9000")
+	if got := FromEnv().Addr; got != "0.0.0.0:9000" {
+		t.Fatalf("REPO_SCOUT_ADDR must override the default, got %q", got)
+	}
+}
