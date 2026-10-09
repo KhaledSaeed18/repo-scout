@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/architecture"
 	"github.com/KhaledSaeed18/repo-scout/internal/gitanalytics"
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
+	"gorm.io/gorm"
 )
 
 // handleHeatmap returns daily activity, weekday/hour heatmap, and streaks.
@@ -109,86 +109,103 @@ func (s *Server) handleArchitecture(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rep)
 }
 
-// handleMetrics aggregates quality signals across the repository.
+// metricsTotals is the repository-wide sum of per-file metrics.
+type metricsTotals struct {
+	Files      int `json:"files"`
+	LOC        int `json:"loc"`
+	Code       int `json:"code"`
+	Comments   int `json:"comments"`
+	Blank      int `json:"blank"`
+	Complexity int `json:"complexity"`
+	Funcs      int `json:"funcs"`
+	Imports    int `json:"imports"`
+	Exports    int `json:"exports"`
+}
+
+// languageTotals is the per-language slice of metricsTotals.
+type languageTotals struct {
+	Files int `json:"files"`
+	LOC   int `json:"loc"`
+	Code  int `json:"code"`
+}
+
+// handleMetrics aggregates quality signals across the repository. All
+// rollups run in SQL so memory stays flat regardless of repository size.
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseID(w, r)
 	if !ok {
 		return
 	}
-	var files []models.File
-	if err := s.db.Where("repo_id = ?", id).Find(&files).Error; err != nil {
-		writeErr(w, http.StatusInternalServerError, "metrics: "+err.Error())
+	limit := queryInt(r, "limit", 20, 100)
+	if limit == 0 {
+		limit = 20
+	}
+	files := func() *gorm.DB { return s.db.Model(&models.File{}).Where("repo_id = ?", id) }
+
+	var totals metricsTotals
+	if err := files().Select(`COUNT(*) AS files,
+		COALESCE(SUM(lines_total), 0) AS loc,
+		COALESCE(SUM(lines_code), 0) AS code,
+		COALESCE(SUM(lines_comment), 0) AS comments,
+		COALESCE(SUM(lines_blank), 0) AS blank,
+		COALESCE(SUM(complexity), 0) AS complexity,
+		COALESCE(SUM(func_count), 0) AS funcs,
+		COALESCE(SUM(imports), 0) AS imports,
+		COALESCE(SUM(exports), 0) AS exports`).Scan(&totals).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "metrics totals: "+err.Error())
 		return
 	}
 
-	byLang := map[string]struct {
-		Files int `json:"files"`
-		LOC   int `json:"loc"`
-		Code  int `json:"code"`
-	}{}
-	totals := struct {
-		Files      int `json:"files"`
-		LOC        int `json:"loc"`
-		Code       int `json:"code"`
-		Comments   int `json:"comments"`
-		Blank      int `json:"blank"`
-		Complexity int `json:"complexity"`
-		Funcs      int `json:"funcs"`
-		Imports    int `json:"imports"`
-		Exports    int `json:"exports"`
-	}{}
-	maxComplexity := 0.0
-	maxLoc := 0
-	deepest := ""
-	maxDepth := 0
-	var largest []models.File
-	var mostComplex []models.File
-
-	for _, f := range files {
-		l := byLang[f.Language]
-		l.Files++
-		l.LOC += f.LinesTotal
-		l.Code += f.LinesCode
-		byLang[f.Language] = l
-		totals.Files++
-		totals.LOC += f.LinesTotal
-		totals.Code += f.LinesCode
-		totals.Comments += f.LinesComment
-		totals.Blank += f.LinesBlank
-		totals.Complexity += f.Complexity
-		totals.Funcs += f.FuncCount
-		totals.Imports += f.Imports
-		totals.Exports += f.Exports
-		if f.LinesCode > maxLoc {
-			maxLoc = f.LinesCode
-		}
-		if float64(f.Complexity) > maxComplexity {
-			maxComplexity = float64(f.Complexity)
-		}
-		if depth := strings.Count(f.Path, "/"); depth > maxDepth {
-			maxDepth = depth
-			deepest = f.Path
-		}
-		if f.Language != "" {
-			largest = append(largest, f)
-			mostComplex = append(mostComplex, f)
-		}
+	var langRows []struct {
+		Language string
+		Files    int
+		LOC      int `gorm:"column:loc"`
+		Code     int
 	}
-	sort.Slice(largest, func(i, j int) bool { return largest[i].LinesCode > largest[j].LinesCode })
-	sort.Slice(mostComplex, func(i, j int) bool { return mostComplex[i].Complexity > mostComplex[j].Complexity })
-
-	if largest == nil {
-		largest = []models.File{}
+	if err := files().Select(`language, COUNT(*) AS files,
+		COALESCE(SUM(lines_total), 0) AS loc,
+		COALESCE(SUM(lines_code), 0) AS code`).
+		Group("language").Scan(&langRows).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "metrics languages: "+err.Error())
+		return
 	}
-	if mostComplex == nil {
-		mostComplex = []models.File{}
+	byLang := make(map[string]languageTotals, len(langRows))
+	for _, row := range langRows {
+		byLang[row.Language] = languageTotals{Files: row.Files, LOC: row.LOC, Code: row.Code}
+	}
+
+	var deepest struct {
+		Path  string
+		Depth int
+	}
+	const depthExpr = "LENGTH(path) - LENGTH(REPLACE(path, '/', ''))"
+	if err := files().Select("path, " + depthExpr + " AS depth").
+		Order("depth DESC, path ASC").Limit(1).Scan(&deepest).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "metrics depth: "+err.Error())
+		return
+	}
+
+	topBy := func(order string) ([]models.File, error) {
+		out := []models.File{}
+		err := files().Where("language <> ''").Order(order).Limit(limit).Find(&out).Error
+		return out, err
+	}
+	largest, err := topBy("lines_code DESC, path ASC")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "metrics largest: "+err.Error())
+		return
+	}
+	mostComplex, err := topBy("complexity DESC, path ASC")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "metrics complex: "+err.Error())
+		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"totals":           totals,
 		"languages":        byLang,
-		"maxDepth":         maxDepth,
-		"deepestFile":      deepest,
+		"maxDepth":         deepest.Depth,
+		"deepestFile":      deepest.Path,
 		"largestFiles":     largest,
 		"mostComplexFiles": mostComplex,
 	})

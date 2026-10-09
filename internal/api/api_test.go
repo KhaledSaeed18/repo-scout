@@ -235,3 +235,29 @@ func TestDeleteRepoCascades(t *testing.T) {
 		}
 	}
 }
+
+func TestMetricsAggregatesAndCapsLists(t *testing.T) {
+	ts, _ := newTestServer(t)
+
+	resp, body := get(t, ts, "/api/repositories/1/metrics?limit=1")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("metrics: %d %v", resp.StatusCode, body)
+	}
+	totals := body["totals"].(map[string]any)
+	if totals["files"].(float64) != 3 {
+		t.Fatalf("expected 3 files, got %v", totals["files"])
+	}
+	if got := len(body["largestFiles"].([]any)); got != 1 {
+		t.Fatalf("expected largestFiles capped at 1, got %d", got)
+	}
+	if got := len(body["mostComplexFiles"].([]any)); got != 1 {
+		t.Fatalf("expected mostComplexFiles capped at 1, got %d", got)
+	}
+	if body["deepestFile"] != "util/util.go" || body["maxDepth"].(float64) != 1 {
+		t.Fatalf("unexpected deepest file: %v depth %v", body["deepestFile"], body["maxDepth"])
+	}
+	langs := body["languages"].(map[string]any)
+	if g, ok := langs["Go"].(map[string]any); !ok || g["files"].(float64) != 2 {
+		t.Fatalf("expected 2 Go files, got %v", langs)
+	}
+}
