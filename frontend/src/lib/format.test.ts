@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatBytes,
+  formatDate,
   formatCompact,
   formatNumber,
   formatPercent,
@@ -51,7 +52,7 @@ describe('formatRelative', () => {
     expect(formatRelative('2026-09-29T12:00:00Z', now)).toBe('10 days ago')
   })
   it('falls back to a date after a month', () => {
-    expect(formatRelative('2026-08-07T12:00:00Z', now)).toBe('Aug 7, 2026')
+    expect(formatRelative('2026-08-07T12:00:00Z', now)).toBe(formatDate('2026-08-07T12:00:00Z'))
   })
 })
 
@@ -65,5 +66,12 @@ describe('formatRemote', () => {
     expect(formatRemote('git@github.com:JSS-Technology/api.git')).toBe('github.com/JSS-Technology/api')
     expect(formatRemote('ssh://git@gitlab.example.com:2222/team/app.git')).toBe('gitlab.example.com:2222/team/app')
     expect(formatRemote('')).toBe('')
+  })
+})
+
+describe('formatDate', () => {
+  it('treats date-only strings as calendar days in any timezone', () => {
+    expect(formatDate('2024-03-01')).toBe('Mar 1, 2024')
+    expect(formatDate('2026-10-09')).toBe('Oct 9, 2026')
   })
 })

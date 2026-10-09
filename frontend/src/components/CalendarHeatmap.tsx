@@ -52,7 +52,7 @@ export default function CalendarHeatmap({
                   cell ? (
                     <span
                       key={cell.date}
-                      title={`${plural(cell.count, 'commit')} on ${formatDate(cell.date + 'T12:00:00Z')}`}
+                      title={`${plural(cell.count, 'commit')} on ${formatDate(cell.date)}`}
                       className={cn('size-[11px] rounded-[2px]', levelClass[cell.level])}
                     />
                   ) : (

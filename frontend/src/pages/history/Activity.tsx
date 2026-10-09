@@ -46,7 +46,7 @@ function Calendar({ heatmap }: { heatmap: Heatmap }) {
 
 function span(s: Streak) {
   if (!s.days) return '—'
-  const range = s.start === s.end ? formatDate(`${s.start}T12:00:00Z`) : `${formatDate(`${s.start}T12:00:00Z`)} to ${formatDate(`${s.end}T12:00:00Z`)}`
+  const range = s.start === s.end ? formatDate(s.start) : `${formatDate(s.start)} to ${formatDate(s.end)}`
   return (
     <>
       <span className="font-medium">{plural(s.days, 'day')}</span>

@@ -35,8 +35,12 @@ export function shortHash(hash: string): string {
   return hash.slice(0, 7)
 }
 
+const dayOnly = /^(\d{4})-(\d{2})-(\d{2})$/
+
+/** "Aug 7, 2026". Date-only strings are calendar days, not UTC midnights. */
 export function formatDate(value: string | Date): string {
-  return shortDate.format(new Date(value))
+  const day = typeof value === 'string' ? dayOnly.exec(value) : null
+  return shortDate.format(day ? new Date(+day[1], +day[2] - 1, +day[3]) : new Date(value))
 }
 
 /** Human distance from now, falling back to a calendar date past 30 days. */
