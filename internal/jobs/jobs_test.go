@@ -172,3 +172,61 @@ func (doneRunner) Run(ctx context.Context, repoID, jobID uint, rep Reporter, set
 	rep.SetProgress(1)
 	return nil
 }
+
+func TestCancelQueuedJob(t *testing.T) {
+	db := testDB(t)
+	m := New(db, &doneRunner{}, nil, nil)
+	job, err := m.Enqueue(1, "scan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Cancel(job.ID); err != nil {
+		t.Fatalf("cancel queued: %v", err)
+	}
+	var j models.Job
+	db.First(&j, job.ID)
+	if j.Status != models.JobCancelled || j.FinishedAt == nil {
+		t.Fatalf("expected queued job cancelled immediately, got %s (finished %v)", j.Status, j.FinishedAt)
+	}
+	if next := m.claimNext(context.Background()); next != nil {
+		t.Fatalf("cancelled job must not be claimed, got %d", next.ID)
+	}
+}
+
+func TestCancelFinishedJobIsRejected(t *testing.T) {
+	db := testDB(t)
+	m := New(db, &doneRunner{}, nil, nil)
+	job := models.Job{RepoID: 1, Kind: "scan", Status: models.JobCompleted}
+	db.Create(&job)
+	if err := m.Cancel(job.ID); err == nil {
+		t.Fatal("expected cancelling a completed job to fail")
+	}
+	var j models.Job
+	db.First(&j, job.ID)
+	if j.Status != models.JobCompleted {
+		t.Fatalf("completed job must stay completed, got %s", j.Status)
+	}
+}
+
+func TestRecoverFinishesCancellingJobs(t *testing.T) {
+	db := testDB(t)
+	job := models.Job{RepoID: 1, Kind: "scan", Status: models.JobCancelling}
+	db.Create(&job)
+	paused := models.Job{RepoID: 2, Kind: "scan", Status: models.JobPaused}
+	db.Create(&paused)
+	m := New(db, &blockingRunner{}, nil, nil)
+	if err := m.recover(); err != nil {
+		t.Fatalf("recover: %v", err)
+	}
+	var j models.Job
+	db.First(&j, job.ID)
+	if j.Status != models.JobCancelled {
+		t.Fatalf("a job cancelled before restart must not be re-queued, got %s", j.Status)
+	}
+	// A paused job lost its worker on restart; it must run again, not hang.
+	var p models.Job
+	db.First(&p, paused.ID)
+	if p.Status != models.JobQueued {
+		t.Fatalf("expected paused job re-queued after restart, got %s", p.Status)
+	}
+}

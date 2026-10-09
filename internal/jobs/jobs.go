@@ -110,8 +110,15 @@ func (m *Manager) Start(ctx context.Context) error {
 // failed so they can be rescanned.
 func (m *Manager) recover() error {
 	now := time.Now()
+	// Jobs the user was cancelling are finished, never resumed.
 	err := m.db.Model(&models.Job{}).
-		Where("status IN ?", []string{models.JobRunning, models.JobCancelling}).
+		Where("status = ?", models.JobCancelling).
+		Updates(map[string]any{"status": models.JobCancelled, "message": "cancelled", "finished_at": now, "updated_at": now}).Error
+	if err != nil {
+		return err
+	}
+	err = m.db.Model(&models.Job{}).
+		Where("status IN ?", []string{models.JobRunning, models.JobPaused}).
 		Updates(map[string]any{"status": models.JobInterrupted, "message": "interrupted by restart", "updated_at": now}).Error
 	if err != nil {
 		return err
@@ -197,18 +204,37 @@ func (m *Manager) Resume(jobID uint) error {
 // Cancel stops a job. Queued jobs are cancelled immediately; running and
 // paused jobs are cancelled at the next checkpoint.
 func (m *Manager) Cancel(jobID uint) error {
-	var job models.Job
-	if err := m.db.First(&job, jobID).Error; err != nil {
-		return err
+	// A queued job has no worker yet, so it can be finished directly. The
+	// status guard keeps this safe if a worker claims it at the same time.
+	now := time.Now()
+	res := m.db.Model(&models.Job{}).
+		Where("id = ? AND status = ?", jobID, models.JobQueued).
+		Updates(map[string]any{"status": models.JobCancelled, "message": "cancelled", "finished_at": now, "updated_at": now})
+	if res.Error != nil {
+		return fmt.Errorf("cancel job %d: %w", jobID, res.Error)
 	}
-	if aj := m.lookup(jobID); aj != nil {
-		aj.mu.Lock()
-		aj.paused = false
-		close(aj.notify)
-		aj.notify = make(chan struct{})
-		aj.mu.Unlock()
-		aj.cancel()
+	if res.RowsAffected == 1 {
+		var job models.Job
+		if err := m.db.First(&job, jobID).Error; err == nil {
+			m.broadcast(&job)
+		}
+		return nil
 	}
+
+	aj := m.lookup(jobID)
+	if aj == nil {
+		var job models.Job
+		if err := m.db.First(&job, jobID).Error; err != nil {
+			return err
+		}
+		return fmt.Errorf("job %d is %s and cannot be cancelled", jobID, job.Status)
+	}
+	aj.mu.Lock()
+	aj.paused = false
+	close(aj.notify)
+	aj.notify = make(chan struct{})
+	aj.mu.Unlock()
+	aj.cancel()
 	return m.updateState(jobID, models.JobCancelling, "cancelling")
 }
 
