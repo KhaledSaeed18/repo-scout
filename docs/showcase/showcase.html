@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Repo Scout showcase</title>
+  <style>
+    @font-face { font-family: Barlow; font-weight: 400; src: url('/frontend/node_modules/@fontsource/barlow/files/barlow-latin-400-normal.woff2'); }
+    @font-face { font-family: Barlow; font-weight: 500; src: url('/frontend/node_modules/@fontsource/barlow/files/barlow-latin-500-normal.woff2'); }
+    @font-face { font-family: Barlow; font-weight: 600; src: url('/frontend/node_modules/@fontsource/barlow/files/barlow-latin-600-normal.woff2'); }
+    @font-face { font-family: 'Barlow Semi Condensed'; font-weight: 600; src: url('/frontend/node_modules/@fontsource/barlow-semi-condensed/files/barlow-semi-condensed-latin-600-normal.woff2'); }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Barlow, sans-serif; }
+    .plate { position: relative; width: 1600px; overflow: hidden; color: var(--foreground); background: var(--background); }
+    .plate.hero { height: 1600px; }
+    .plate.detail { height: 1280px; }
+    .brand { position: absolute; top: 54px; left: 64px; width: 230px; height: auto; }
+    .context { position: absolute; top: 66px; right: 64px; font-size: 22px; color: var(--muted-foreground); }
+    h1 { position: absolute; top: 122px; left: 64px; margin: 0; font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 84px; letter-spacing: -2px; line-height: 1.02; }
+    .hero h1 { top: 126px; }
+    .intro { position: absolute; top: 156px; right: 64px; width: 460px; margin: 0; color: var(--muted-foreground); font-size: 27px; line-height: 1.4; }
+    .contours { position: absolute; top: -310px; right: -350px; width: 1050px; height: 900px; fill: none; stroke: var(--border); stroke-width: 1.2; opacity: .55; pointer-events: none; }
+    .contours path { vector-effect: non-scaling-stroke; }
+    .frame { position: absolute; border: 1px solid var(--input); border-radius: 12px; overflow: hidden; background: var(--background); box-shadow: 0 24px 64px color-mix(in srgb, var(--foreground) 9%, transparent); }
+    .hero .frame { left: 64px; top: 348px; width: 1472px; }
+    .chrome { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--sidebar); font-size: 17px; color: var(--muted-foreground); }
+    .chrome span:first-child { color: var(--foreground); font-weight: 500; }
+    .chrome .local { display: flex; align-items: center; gap: 9px; }
+    .chrome .local::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+    .screen { display: block; width: 100%; height: auto; }
+    .footer { position: absolute; bottom: 35px; left: 64px; right: 64px; display: flex; justify-content: space-between; align-items: center; font-size: 21px; color: var(--muted-foreground); }
+    .footer span:first-child { color: var(--foreground); }
+    .detail h1 { font-size: 76px; }
+    .detail .frame { top: 334px; left: 64px; width: 1120px; }
+    .detail .notes { position: absolute; top: 370px; right: 64px; width: 270px; }
+    .note { padding: 26px 0; border-top: 1px solid var(--border); }
+    .note:first-child { padding-top: 0; border-top: 0; }
+    .note h2 { margin: 0 0 12px; font-family: 'Barlow Semi Condensed', sans-serif; font-size: 32px; font-weight: 600; line-height: 1.1; }
+    .note p { margin: 0; font-size: 23px; line-height: 1.4; color: var(--muted-foreground); }
+    .detail .intro { top: 156px; width: 470px; }
+    .architecture .frame { top: 334px; }
+    .architecture .notes { top: 362px; }
+    .note .swatch { display: block; width: 30px; height: 3px; background: var(--primary); margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <g id="terrain">
+        <path d="M130 670C-25 491 114 285 313 214C475 156 560 43 759 100C936 150 1034 370 934 559C845 726 711 805 526 762C347 720 243 800 130 670Z" />
+        <path d="M190 643C65 488 172 327 342 266C485 215 576 107 742 155C889 198 970 376 884 536C808 677 698 744 540 708C386 673 285 745 190 643Z" />
+        <path d="M250 615C157 488 230 369 372 317C496 274 593 171 725 211C842 245 906 383 834 513C771 628 685 683 554 654C425 625 327 690 250 615Z" />
+        <path d="M310 588C248 487 288 412 401 369C507 333 609 235 708 266C795 293 842 389 784 490C734 579 672 622 568 600C464 578 369 635 310 588Z" />
+        <path d="M370 560C340 487 346 453 431 420C518 392 626 299 691 322C748 340 778 395 734 467C697 530 659 561 582 546C503 530 411 580 370 560Z" />
+      </g>
+    </defs>
+  </svg>
+  <article class="plate hero dark" id="overview">
+    <svg class="contours" viewBox="0 0 1050 900" aria-hidden="true"><use href="#terrain" /></svg>
+    <img class="brand" src="/brand/logo-dark.svg" alt="Repo Scout" />
+    <span class="context">Local-first repository analytics</span>
+    <h1>Your codebase,<br />charted.</h1>
+    <p class="intro">Explore the history, code and structure of any Git repository. All on your machine.</p>
+    <div class="frame">
+      <div class="chrome"><span>Repository overview</span><span class="local">Running on localhost</span></div>
+      <img class="screen" src="captures/overview.png" alt="Repo Scout overview of TanStack Query, including languages, commit activity, complex files and contributors" />
+    </div>
+    <div class="footer"><span>One scan. The whole picture.</span><span>Real analysis of TanStack/query</span></div>
+  </article>
+  <article class="plate detail" id="history">
+    <svg class="contours" viewBox="0 0 1050 900" aria-hidden="true"><use href="#terrain" /></svg>
+    <img class="brand" src="/brand/logo.svg" alt="Repo Scout" />
+    <span class="context">Explore the history</span>
+    <h1>See the rhythm<br />behind the repository.</h1>
+    <p class="intro">From a year of commits to the hours work happens, follow the patterns in real Git history.</p>
+    <div class="frame">
+      <div class="chrome"><span>Activity</span><span class="local">Light theme</span></div>
+      <img class="screen" src="captures/activity.png" alt="Populated commit calendar and hour-of-week activity chart for TanStack Query" />
+    </div>
+    <aside class="notes">
+      <div class="note"><span class="swatch"></span><h2>A year at a glance</h2><p>Spot busy periods and quiet stretches in the commit calendar.</p></div>
+      <div class="note"><h2>Every author's clock</h2><p>Explore activity by hour and weekday, in the time it happened.</p></div>
+      <div class="note"><h2>Follow the people</h2><p>Trace contributors, streaks and file ownership through history.</p></div>
+    </aside>
+    <div class="footer"><span>Commit calendars, punch cards and streaks.</span><span>Real analysis of TanStack/query</span></div>
+  </article>
+  <article class="plate detail architecture dark" id="structure">
+    <svg class="contours" viewBox="0 0 1050 900" aria-hidden="true"><use href="#terrain" /></svg>
+    <img class="brand" src="/brand/logo-dark.svg" alt="Repo Scout" />
+    <span class="context">Explore the structure</span>
+    <h1>Find your way<br />through the code.</h1>
+    <p class="intro">Turn imports into a map you can explore. Follow connections from folders down to files.</p>
+    <div class="frame">
+      <div class="chrome"><span>Architecture</span><span class="local">Dark theme</span></div>
+      <img class="screen" src="captures/architecture.png" alt="Repo Scout analyzing its own architecture, with the analysis package selected to highlight its imports" />
+    </div>
+    <aside class="notes">
+      <div class="note"><span class="swatch"></span><h2>Trace connections</h2><p>Select a folder to highlight the code it connects to.</p></div>
+      <div class="note"><h2>Choose your scale</h2><p>Explore top folders, deeper levels or individual source files.</p></div>
+      <div class="note"><h2>Inspect the findings</h2><p>Find import cycles, entry points and potentially unused files.</p></div>
+    </aside>
+    <div class="footer"><span>Explore interactively. Export as SVG.</span><span>Repo Scout analyzing itself</span></div>
+  </article>
+  <script>
+    const view = new URLSearchParams(location.search).get('view') || 'overview';
+    for (const plate of document.querySelectorAll('.plate')) plate.hidden = plate.id !== view;
+  </script>
+</body>
+</html>

@@ -27,6 +27,33 @@ There is no upload step and no account. You give it a path, it walks the
 tree and the git log, and the result is a set of pages you can actually
 click through instead of a wall of terminal output.
 
+## See it in action
+
+A real scan of [TanStack Query](https://github.com/TanStack/query):
+3,602 files, 5,517 commits and 1,141 contributors, explored locally.
+Open any image for the full-resolution view.
+
+[![Repo Scout's dark-theme overview of TanStack Query, showing language distribution, commit activity, complexity hot spots and contributors](docs/showcase/overview.png)](docs/showcase/overview.png)
+
+<details>
+<summary>Explore the history and architecture views</summary>
+
+### Follow the history
+
+Commit calendars and hour-of-week activity reveal the patterns in TanStack
+Query's history, using each author's local clock.
+
+[![Repo Scout's light-theme activity view, with a populated commit calendar and hour-of-week punch card](docs/showcase/history.png)](docs/showcase/history.png)
+
+### Explore the structure
+
+Repo Scout analyzing itself: select a folder to trace its imports, change
+the graph's detail level, and inspect the architecture findings.
+
+[![Repo Scout's dark-theme architecture view, highlighting the analysis package and its connections to other backend packages](docs/showcase/structure.png)](docs/showcase/structure.png)
+
+</details>
+
 ## Why Repo Scout
 
 - **One scan, the whole picture.** Architecture, metrics, dependencies, git

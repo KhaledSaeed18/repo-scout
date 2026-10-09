@@ -1,0 +1,55 @@
+{
+  "capturedAt": "2026-10-09T18:03:09.477Z",
+  "repositories": [
+    {
+      "repository": "query",
+      "remote": "https://github.com/TanStack/query.git",
+      "commit": "a8163e00b7c02b3e5ce3f6381c13aec1b894cd71",
+      "files": 3602,
+      "commits": 5517,
+      "contributors": 1141
+    },
+    {
+      "repository": "repo-scout",
+      "remote": "https://github.com/KhaledSaeed18/repo-scout.git",
+      "commit": "52ad56864c55edff2895907923b3e9ff13073d3e",
+      "files": 169,
+      "commits": 176,
+      "contributors": 1
+    }
+  ],
+  "views": [
+    {
+      "route": "/",
+      "repository": "query",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      }
+    },
+    {
+      "route": "/activity",
+      "repository": "query",
+      "theme": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "cropHeight": 680
+    },
+    {
+      "route": "/architecture",
+      "repository": "repo-scout",
+      "theme": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "cropHeight": 720,
+      "selectedFolder": "internal/analysis",
+      "zoomInSteps": 3,
+      "panLeft": 170
+    }
+  ]
+}
