@@ -215,3 +215,20 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* React Flow chrome in theme colors. */
+.react-flow__controls {
+  @apply overflow-hidden rounded-md border shadow-none;
+}
+.react-flow__controls-button {
+  @apply border-b-border bg-card text-foreground hover:bg-secondary;
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+.react-flow__attribution {
+  @apply bg-transparent text-muted-foreground;
+}
+.react-flow__attribution a {
+  color: inherit;
+}
