@@ -22,7 +22,7 @@ export default function RepoSwitcher() {
   const items = repos.map((r) => ({ value: String(r.id), label: r.name }))
   return (
     <Select items={items} value={String(repo.id)} onValueChange={(v) => v && setRepoId(Number(v))}>
-      <SelectTrigger aria-label="Repository" className="h-auto w-full bg-transparent px-2.5 py-2 hover:bg-sidebar-accent">
+      <SelectTrigger aria-label="Repository" className="w-full bg-transparent px-2.5 py-2 hover:bg-sidebar-accent data-[size=default]:h-auto">
         <SelectValue>
           {() => (
             <span className="flex min-w-0 flex-col items-start gap-0.5 leading-tight">

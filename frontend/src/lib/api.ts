@@ -240,6 +240,17 @@ export const useDeleteRepo = () => {
   })
 }
 
+export const useJobAction = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, action }: { id: number; action: 'pause' | 'resume' | 'cancel' }) =>
+      api.jobAction(id, action),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['jobs'] })
+    },
+  })
+}
+
 export const useSaveSettings = () => {
   const qc = useQueryClient()
   return useMutation({
