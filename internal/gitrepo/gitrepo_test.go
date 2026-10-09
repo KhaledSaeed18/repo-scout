@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
 )
@@ -210,5 +211,34 @@ func TestAnalyzeHistory(t *testing.T) {
 	fh := files["c.go"]
 	if fh == nil || fh.Commits != 1 || fh.Author != "Test" {
 		t.Fatalf("unexpected c.go history: %+v", fh)
+	}
+}
+
+func TestStreamLogsKeepsAuthorTimezone(t *testing.T) {
+	root := t.TempDir()
+	git(t, root, "init", "-q", "-b", "main", ".")
+	writeFile(t, root, "a.go", "package a\n")
+	git(t, root, "add", ".")
+	cmd := exec.Command("git", "-C", root, "commit", "-qm", "late night")
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test", "GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test", "GIT_COMMITTER_EMAIL=test@example.com",
+		"GIT_AUTHOR_DATE=2024-01-01T23:30:00+03:00", "GIT_COMMITTER_DATE=2024-01-01T23:30:00+03:00")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("commit: %v\n%s", err, out)
+	}
+
+	var got models.Commit
+	if err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) { got = c }); err != nil {
+		t.Fatal(err)
+	}
+	if got.TZOffset != 180 {
+		t.Fatalf("expected +180 minute offset, got %d", got.TZOffset)
+	}
+	if want := time.Date(2024, 1, 1, 20, 30, 0, 0, time.UTC); !got.Date.Equal(want) || got.Date.Location() != time.UTC {
+		t.Fatalf("expected UTC instant %v, got %v", want, got.Date)
+	}
+	if local := got.LocalTime(); local.Hour() != 23 || local.Day() != 1 {
+		t.Fatalf("expected author-local 23:30 on Jan 1, got %v", local)
 	}
 }

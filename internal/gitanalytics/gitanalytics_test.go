@@ -54,7 +54,7 @@ func writeFile(t *testing.T, root, rel, content string) {
 	}
 }
 
-func newRepo(t *testing.T) (*gorm.DB, models.Repository) {
+func testDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := database.Open(":memory:")
 	if err != nil {
@@ -63,6 +63,12 @@ func newRepo(t *testing.T) (*gorm.DB, models.Repository) {
 	if err := database.Migrate(db); err != nil {
 		t.Fatal(err)
 	}
+	return db
+}
+
+func newRepo(t *testing.T) (*gorm.DB, models.Repository) {
+	t.Helper()
+	db := testDB(t)
 	root := t.TempDir()
 	gitAt(t, root, "", "init", "-q", "-b", "main", ".")
 	writeFile(t, root, "a.txt", "line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\n")
@@ -100,9 +106,10 @@ func TestHeatmap(t *testing.T) {
 	if err := db.Where("repo_id = ?", repo.ID).Order("date ASC").First(&firstCommit).Error; err != nil {
 		t.Fatal(err)
 	}
-	if h.Hourly[int(firstCommit.Date.Weekday())][firstCommit.Date.Hour()] != 1 {
+	local := firstCommit.LocalTime()
+	if h.Hourly[int(local.Weekday())][local.Hour()] != 1 {
 		t.Fatalf("expected 1 commit in weekday/hour bucket of %v, got %d",
-			firstCommit.Date, h.Hourly[int(firstCommit.Date.Weekday())][firstCommit.Date.Hour()])
+			local, h.Hourly[int(local.Weekday())][local.Hour()])
 	}
 	total := 0
 	for _, row := range h.Hourly {
@@ -180,6 +187,26 @@ func TestStreaksFromDatesBridgesConsecutiveDays(t *testing.T) {
 	}
 	if got.Current.Days != 1 || got.Current.Start != "2024-02-09" {
 		t.Fatalf("unexpected current %+v", got.Current)
+	}
+}
+
+func TestHeatmapUsesAuthorLocalTime(t *testing.T) {
+	db := testDB(t)
+	// 23:30 in UTC+3 is 20:30 UTC; a UTC+14 author at 01:00 is the previous UTC day.
+	db.Create(&models.Commit{RepoID: 9, Hash: "a", Email: "x@y", Date: time.Date(2024, 1, 1, 20, 30, 0, 0, time.UTC), TZOffset: 180})
+	db.Create(&models.Commit{RepoID: 9, Hash: "b", Email: "x@y", Date: time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC), TZOffset: 14 * 60})
+	h, err := ComputeHeatmap(db, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.Hourly[1][23] != 1 { // Monday 23:00 local
+		t.Fatalf("expected a commit at Monday 23:00 local, got %v", h.Hourly[1])
+	}
+	if h.Hourly[2][1] != 1 { // Tuesday 01:00 local
+		t.Fatalf("expected a commit at Tuesday 01:00 local, got %v", h.Hourly[2])
+	}
+	if len(h.Daily) != 2 || h.Daily[0].Date != "2024-01-01" || h.Daily[1].Date != "2024-01-02" {
+		t.Fatalf("expected local days Jan 1 and Jan 2, got %+v", h.Daily)
 	}
 }
 

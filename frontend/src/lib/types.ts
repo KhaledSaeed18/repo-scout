@@ -55,6 +55,8 @@ export interface Commit {
   author: string
   email: string
   date: string
+  /** Author's UTC offset in minutes. */
+  tzOffset: number
   message: string
   filesChanged: number
   insertions: number

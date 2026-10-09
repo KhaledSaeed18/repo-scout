@@ -140,7 +140,7 @@ func (a *Analyzer) Tags(ctx context.Context, root string) ([]models.Tag, error) 
 func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.Commit, []FileChange)) error {
 	args := []string{
 		"log", "--branches", "--tags", "--remotes", "--numstat", "--date-order",
-		"--pretty=format:%x1e%H%x1f%an%x1f%ae%x1f%at%x1f%P%x1f%s%x1e",
+		"--pretty=format:%x1e%H%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s%x1e",
 	}
 	// HEAD may be detached; include it only when it resolves so empty
 	// repositories do not fail.
@@ -192,12 +192,15 @@ func parseHeader(line string, c *models.Commit) {
 	if len(fields) < 5 {
 		return
 	}
-	ts, _ := strconv.ParseInt(fields[3], 10, 64)
+	// %aI is strict ISO 8601 with the author's offset, e.g. 2024-01-01T23:30:00+03:00.
+	authored, _ := time.Parse(time.RFC3339, fields[3])
+	_, offset := authored.Zone()
 	parents := strings.Fields(fields[4])
 	c.Hash = fields[0]
 	c.Author = fields[1]
 	c.Email = fields[2]
-	c.Date = time.Unix(ts, 0).UTC()
+	c.Date = authored.UTC()
+	c.TZOffset = offset / 60
 	c.IsMerge = len(parents) > 1
 	c.Message = fields[5]
 }

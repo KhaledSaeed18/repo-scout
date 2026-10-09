@@ -68,30 +68,26 @@ type LargestCommit struct {
 	Deletions    int    `json:"deletions"`
 }
 
-// Heatmap rolls commit counts up by calendar day and by weekday/hour.
+// ComputeHeatmap rolls commit counts up by calendar day and by weekday/hour,
+// both on each author's local clock.
 func ComputeHeatmap(db *gorm.DB, repoID uint) (Heatmap, error) {
 	var commits []models.Commit
-	err := db.Select("date").Where("repo_id = ?", repoID).Order("date ASC").Find(&commits).Error
+	err := db.Select("date", "tz_offset").Where("repo_id = ?", repoID).Find(&commits).Error
 	if err != nil {
 		return Heatmap{}, err
 	}
 	h := Heatmap{Total: len(commits), Daily: []Day{}, Hourly: make([][]int, 7)}
-	if len(commits) == 0 {
-		for i := range h.Hourly {
-			h.Hourly[i] = make([]int, 24)
-		}
-		return h, nil
-	}
 	for i := range h.Hourly {
 		h.Hourly[i] = make([]int, 24)
 	}
-	h.Start = commits[0].Date.Format("2006-01-02")
-	h.End = commits[len(commits)-1].Date.Format("2006-01-02")
+	if len(commits) == 0 {
+		return h, nil
+	}
 	byDay := map[string]int{}
 	for _, c := range commits {
-		d := c.Date.Format("2006-01-02")
-		byDay[d]++
-		h.Hourly[int(c.Date.Weekday())][c.Date.Hour()]++
+		local := c.LocalTime()
+		byDay[local.Format(dayLayout)]++
+		h.Hourly[int(local.Weekday())][local.Hour()]++
 	}
 	days := make([]Day, 0, len(byDay))
 	for d, n := range byDay {
@@ -99,6 +95,8 @@ func ComputeHeatmap(db *gorm.DB, repoID uint) (Heatmap, error) {
 	}
 	sort.Slice(days, func(i, j int) bool { return days[i].Date < days[j].Date })
 	h.Daily = days
+	h.Start = days[0].Date
+	h.End = days[len(days)-1].Date
 	return h, nil
 }
 
@@ -106,14 +104,14 @@ func ComputeHeatmap(db *gorm.DB, repoID uint) (Heatmap, error) {
 // only reported as current when it reaches today or yesterday relative to now.
 func Streaks(db *gorm.DB, repoID uint, email string, now time.Time) (StreaksResult, error) {
 	var commits []models.Commit
-	err := db.Select("date").Where("repo_id = ? AND email = ?", repoID, email).
+	err := db.Select("date", "tz_offset").Where("repo_id = ? AND email = ?", repoID, email).
 		Order("date ASC").Find(&commits).Error
 	if err != nil {
 		return StreaksResult{}, err
 	}
 	dates := make([]time.Time, len(commits))
 	for i, c := range commits {
-		dates[i] = c.Date
+		dates[i] = c.LocalTime()
 	}
 	return streaksFromDates(email, dates, now), nil
 }
@@ -122,14 +120,14 @@ func Streaks(db *gorm.DB, repoID uint, email string, now time.Time) (StreaksResu
 // single pass, ordered by longest streak (then commits) descending.
 func AllStreaks(db *gorm.DB, repoID uint, now time.Time) ([]StreaksResult, error) {
 	var commits []models.Commit
-	err := db.Select("email", "date").Where("repo_id = ?", repoID).
+	err := db.Select("email", "date", "tz_offset").Where("repo_id = ?", repoID).
 		Order("date ASC").Find(&commits).Error
 	if err != nil {
 		return nil, err
 	}
 	byEmail := map[string][]time.Time{}
 	for _, c := range commits {
-		byEmail[c.Email] = append(byEmail[c.Email], c.Date)
+		byEmail[c.Email] = append(byEmail[c.Email], c.LocalTime())
 	}
 	out := make([]StreaksResult, 0, len(byEmail))
 	for email, dates := range byEmail {
@@ -147,7 +145,8 @@ func AllStreaks(db *gorm.DB, repoID uint, now time.Time) ([]StreaksResult, error
 	return out, nil
 }
 
-// streaksFromDates derives streaks from commit timestamps (any order).
+// streaksFromDates derives streaks from commit timestamps (any order), using
+// the calendar day of each timestamp in its own location.
 func streaksFromDates(email string, dates []time.Time, now time.Time) StreaksResult {
 	res := StreaksResult{Email: email, All: []Streak{}, TotalCommits: len(dates)}
 	if len(dates) == 0 {
@@ -155,7 +154,7 @@ func streaksFromDates(email string, dates []time.Time, now time.Time) StreaksRes
 	}
 	seen := map[string]bool{}
 	for _, d := range dates {
-		seen[d.UTC().Format(dayLayout)] = true
+		seen[d.Format(dayLayout)] = true
 	}
 	days := make([]string, 0, len(seen))
 	for d := range seen {

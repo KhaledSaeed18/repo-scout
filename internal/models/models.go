@@ -84,11 +84,18 @@ type Commit struct {
 	Author       string    `json:"author"`
 	Email        string    `json:"email"`
 	Date         time.Time `json:"date"`
+	TZOffset     int       `json:"tzOffset"` // author's UTC offset in minutes
 	Message      string    `json:"message"`
 	FilesChanged int       `json:"filesChanged"`
 	Insertions   int       `json:"insertions"`
 	Deletions    int       `json:"deletions"`
 	IsMerge      bool      `json:"isMerge"`
+}
+
+// LocalTime is the commit time on the author's own clock, which is what
+// activity views (days, hours of the week, streaks) should bucket by.
+func (c Commit) LocalTime() time.Time {
+	return c.Date.In(time.FixedZone("", c.TZOffset*60))
 }
 
 // Branch is a git branch pointing at a commit hash.
