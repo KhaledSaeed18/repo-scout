@@ -87,7 +87,14 @@ export default function FolderPicker({ onSelect }: { onSelect: (path: string) =>
                   aria-selected={highlighted === entry.path}
                   onClick={() => setHighlighted(entry.path)}
                   onDoubleClick={() => go(entry.path)}
-                  onKeyDown={(e) => e.key === 'Enter' && go(entry.path)}
+                  onKeyDown={(e) => {
+                    // Enter opens the folder; stop the button's own click from
+                    // re-highlighting the entry that just disappeared.
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      go(entry.path)
+                    }
+                  }}
                   className={cn(
                     'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-secondary',
                     highlighted === entry.path && 'bg-accent text-accent-foreground hover:bg-accent',
