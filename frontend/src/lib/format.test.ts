@@ -5,6 +5,7 @@ import {
   formatNumber,
   formatPercent,
   formatRelative,
+  formatRemote,
   plural,
   shortHash,
 } from './format'
@@ -56,4 +57,13 @@ describe('formatRelative', () => {
 
 it('shortens hashes to seven characters', () => {
   expect(shortHash('41a95d483d833ce6bc8662e443870695dc1b7f76')).toBe('41a95d4')
+})
+
+describe('formatRemote', () => {
+  it('normalizes https and ssh remotes', () => {
+    expect(formatRemote('https://github.com/KhaledSaeed18/repo-scout')).toBe('github.com/KhaledSaeed18/repo-scout')
+    expect(formatRemote('git@github.com:JSS-Technology/api.git')).toBe('github.com/JSS-Technology/api')
+    expect(formatRemote('ssh://git@gitlab.example.com:2222/team/app.git')).toBe('gitlab.example.com:2222/team/app')
+    expect(formatRemote('')).toBe('')
+  })
 })

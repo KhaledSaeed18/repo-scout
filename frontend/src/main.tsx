@@ -5,7 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
-import Dashboard from './pages/Dashboard'
+import Overview from './pages/Overview'
 import Repositories from './pages/Repositories'
 import Git from './pages/Git'
 import Files from './pages/Files'
@@ -33,7 +33,7 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <Routes>
             <Route element={<App />}>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Overview />} />
               <Route path="/repositories" element={<Repositories />} />
               <Route path="/scan" element={<Navigate to="/repositories" replace />} />
               <Route path="/git" element={<Git />} />

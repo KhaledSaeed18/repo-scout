@@ -58,3 +58,13 @@ export function formatRelative(value: string | Date, now: Date = new Date()): st
 export function plural(n: number, singular: string, pluralForm = `${singular}s`): string {
   return `${formatNumber(n)} ${n === 1 ? singular : pluralForm}`
 }
+
+/** Normalizes HTTPS and SSH remotes to "host/owner/repo". */
+export function formatRemote(remote: string): string {
+  return remote
+    .trim()
+    .replace(/^[a-z+]+:\/\//, '')
+    .replace(/^[^@/]+@/, '')
+    .replace(/^([^/:]+):(?!\d+\/)/, '$1/')
+    .replace(/\.git$/, '')
+}

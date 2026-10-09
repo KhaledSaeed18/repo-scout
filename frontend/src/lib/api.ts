@@ -79,7 +79,7 @@ export const api = {
   dependencies: (id: number) => get<DependenciesResponse>(`/api/repositories/${id}/dependencies`),
   duplicates: (id: number) => get<DuplicatesResponse>(`/api/repositories/${id}/duplicates`),
   architecture: (id: number) => get<Architecture>(`/api/repositories/${id}/architecture`),
-  metrics: (id: number) => get<Metrics>(`/api/repositories/${id}/metrics`),
+  metrics: (id: number, limit = 20) => get<Metrics>(`/api/repositories/${id}/metrics?limit=${limit}`),
   search: (params: Record<string, string | number | boolean>) => {
     const qs = new URLSearchParams(
       Object.entries(params).map(([k, v]) => [k, String(v)]),
@@ -198,10 +198,10 @@ export const useArchitecture = (id: number) =>
     enabled: id > 0,
   })
 
-export const useMetrics = (id: number) =>
+export const useMetrics = (id: number, limit = 20) =>
   useQuery({
-    queryKey: ['metrics', id],
-    queryFn: () => api.metrics(id),
+    queryKey: ['metrics', id, limit],
+    queryFn: () => api.metrics(id, limit),
     enabled: id > 0,
   })
 
