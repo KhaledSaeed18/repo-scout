@@ -2,6 +2,7 @@ import { Menu, X } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
+import BrandMark from './components/BrandMark'
 import ErrorBoundary from './components/ErrorBoundary'
 import RepoProvider from './components/RepoProvider'
 import Sidebar from './components/Sidebar'
@@ -47,6 +48,7 @@ export default function App() {
             <Button variant="ghost" size="icon" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
               {menuOpen ? <X /> : <Menu />}
             </Button>
+            <BrandMark className="size-6" />
             <span className="font-heading font-semibold">Repo Scout</span>
           </header>
           <main className="flex-1 overflow-y-auto">

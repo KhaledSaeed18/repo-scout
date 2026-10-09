@@ -17,6 +17,7 @@ import {
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import ActiveJobs from './ActiveJobs'
+import BrandMark from './BrandMark'
 import RepoSwitcher from './RepoSwitcher'
 
 interface NavItem {
@@ -82,22 +83,11 @@ function Item({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) 
   )
 }
 
-/** Compass glyph drawn in theme colors. */
-function Mark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
-      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      <path d="M16.5 7.5 13.4 13.4 7.5 16.5l3.1-5.9z" fill="var(--primary)" />
-      <circle cx="12" cy="12" r="1.25" fill="var(--sidebar)" />
-    </svg>
-  )
-}
-
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-5 overflow-y-auto px-3 py-4">
       <div className="flex items-center gap-2 px-2.5">
-        <Mark />
+        <BrandMark />
         <span className="font-heading text-lg font-semibold tracking-tight">Repo Scout</span>
       </div>
 
