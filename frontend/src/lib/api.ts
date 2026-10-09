@@ -213,8 +213,9 @@ export const useBrowse = (path: string, enabled: boolean) =>
     staleTime: 10000,
   })
 
-export const useJobs = (refetchMs = 3000) =>
-  useQuery({ queryKey: ['jobs'], queryFn: () => api.jobs(), refetchInterval: refetchMs })
+// Job changes are pushed over the WebSocket; polling is only a slow fallback.
+export const useJobs = () =>
+  useQuery({ queryKey: ['jobs'], queryFn: () => api.jobs(), refetchInterval: 15000 })
 
 export const useSettings = () =>
   useQuery({ queryKey: ['settings'], queryFn: () => api.settings() })

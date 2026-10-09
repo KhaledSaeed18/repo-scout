@@ -91,7 +91,7 @@ function JobRow({ job }: { job: Job }) {
 export default function Scan() {
   const [path, setPath] = useState('')
   const create = useCreateRepo()
-  const { data, isLoading } = useJobs(1500)
+  const { data, isLoading } = useJobs()
   const jobs = data?.jobs ?? []
 
   const submit = (e: React.FormEvent) => {

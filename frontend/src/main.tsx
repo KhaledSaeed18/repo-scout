@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
@@ -34,7 +34,8 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route element={<App />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/scan" element={<Scan />} />
+              <Route path="/repositories" element={<Scan />} />
+              <Route path="/scan" element={<Navigate to="/repositories" replace />} />
               <Route path="/git" element={<Git />} />
               <Route path="/files" element={<Files />} />
               <Route path="/search" element={<Search />} />
