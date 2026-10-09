@@ -63,7 +63,11 @@ func New(db *gorm.DB) *Scanner {
 // progress through progress.
 func (s *Scanner) Scan(ctx context.Context, repoID uint, root string, settings config.Settings, progress ProgressFunc) (Stats, error) {
 	ignoreDirs := toSet(settings.IgnoreFolders)
-	ignoreExts := toSet(settings.IgnoreExtensions)
+	// Extensions match with or without a leading dot ("log" or ".log").
+	ignoreExts := make(map[string]struct{}, len(settings.IgnoreExtensions))
+	for _, e := range settings.IgnoreExtensions {
+		ignoreExts[strings.TrimPrefix(strings.ToLower(strings.TrimSpace(e)), ".")] = struct{}{}
+	}
 
 	paths := make([]string, 0, 1024)
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -86,7 +90,7 @@ func (s *Scanner) Scan(ctx context.Context, repoID uint, root string, settings c
 			}
 			return nil
 		}
-		if _, ok := ignoreExts[strings.ToLower(filepath.Ext(path))]; ok {
+		if _, ok := ignoreExts[strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")]; ok && filepath.Ext(path) != "" {
 			return nil
 		}
 		if isOSJunk(d.Name()) {

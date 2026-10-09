@@ -113,3 +113,25 @@ func TestScanCancel(t *testing.T) {
 		t.Fatalf("expected cancellation error")
 	}
 }
+
+func TestScanIgnoresExtensionsWithOrWithoutDot(t *testing.T) {
+	root := t.TempDir()
+	mkFile(t, root, "main.go", "package main\n")
+	mkFile(t, root, "debug.log", "noise\n")
+	mkFile(t, root, "cache.TMP", "noise\n")
+
+	db := testDB(t)
+	repo := models.Repository{Name: "r", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	settings := config.Defaults()
+	settings.IgnoreExtensions = []string{"log", ".tmp"}
+	stats, err := New(db).Scan(context.Background(), repo.ID, root, settings, nil)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if stats.FileCount != 1 {
+		t.Fatalf("expected only main.go, got %d files", stats.FileCount)
+	}
+}
