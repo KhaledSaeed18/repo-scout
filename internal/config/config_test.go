@@ -25,8 +25,26 @@ func TestValidate(t *testing.T) {
 			t.Fatalf("case %d: expected validation error", i)
 		}
 	}
-	ok := Settings{WorkerCount: 2, MaxFileSize: 1, DupMinSimilarity: 0.5, DupMinLines: 2}
+	ok := Settings{WorkerCount: 2, MaxFileSize: 1, DupMinSimilarity: 0.5, DupMinLines: 2, Theme: "light"}
 	if err := ok.Validate(); err != nil {
 		t.Fatalf("expected valid settings, got %v", err)
+	}
+}
+
+func TestValidateTheme(t *testing.T) {
+	for _, theme := range []string{"system", "light", "dark"} {
+		s := Defaults()
+		s.Theme = theme
+		if err := s.Validate(); err != nil {
+			t.Fatalf("theme %q should be valid: %v", theme, err)
+		}
+	}
+	s := Defaults()
+	s.Theme = "solarized"
+	if err := s.Validate(); err == nil {
+		t.Fatal("expected unknown theme to be rejected")
+	}
+	if Defaults().Theme != "system" {
+		t.Fatalf("expected system theme by default, got %q", Defaults().Theme)
 	}
 }

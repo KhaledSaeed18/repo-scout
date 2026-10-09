@@ -53,7 +53,7 @@ func Defaults() Settings {
 		MaxSearchFiles:   20000,
 		DupMinLines:      6,
 		DupMinSimilarity: 0.6,
-		Theme:            "dark",
+		Theme:            "system",
 	}
 }
 
@@ -101,6 +101,11 @@ func (s Settings) Validate() error {
 	}
 	if s.DupMinLines < 1 {
 		return fmt.Errorf("duplicate min lines must be at least 1")
+	}
+	switch s.Theme {
+	case "system", "light", "dark":
+	default:
+		return fmt.Errorf("theme must be system, light, or dark")
 	}
 	return nil
 }
