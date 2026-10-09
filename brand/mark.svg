@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Repo Scout">
+  <title>Repo Scout</title>
+  <g fill="none" stroke="#1B2420" stroke-width="3.2">
+    <ellipse cx="31" cy="33" rx="27.5" ry="25" transform="rotate(-35 31 33)"/>
+    <ellipse cx="33.83" cy="30.17" rx="17.05" ry="15.5" transform="rotate(-35 33.83 30.17)"/>
+    <ellipse cx="35.95" cy="28.05" rx="7.92" ry="7.2" transform="rotate(-35 35.95 28.05)"/>
+  </g>
+  <circle cx="36.94" cy="27.06" r="3" fill="#3346D3"/>
+</svg>
