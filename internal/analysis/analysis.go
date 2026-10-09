@@ -373,7 +373,8 @@ func (r *Runner) duplicates(ctx context.Context, repo *models.Repository, settin
 		return nil
 	}
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&res.Groups).Error; err != nil {
+		// Batched to stay under SQLite's bound-parameter limit on big repos.
+		if err := tx.CreateInBatches(&res.Groups, 500).Error; err != nil {
 			return err
 		}
 		// The detector numbers groups 1..n by position; point each block at
@@ -385,7 +386,7 @@ func (r *Runner) duplicates(ctx context.Context, repo *models.Repository, settin
 			}
 			res.Blocks[i].GroupID = res.Groups[idx].ID
 		}
-		return tx.Create(&res.Blocks).Error
+		return tx.CreateInBatches(&res.Blocks, 500).Error
 	})
 }
 
