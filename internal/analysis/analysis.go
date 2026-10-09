@@ -376,6 +376,15 @@ func (r *Runner) duplicates(ctx context.Context, repo *models.Repository, settin
 		if err := tx.Create(&res.Groups).Error; err != nil {
 			return err
 		}
+		// The detector numbers groups 1..n by position; point each block at
+		// the ID its group was stored under.
+		for i := range res.Blocks {
+			idx := int(res.Blocks[i].GroupID) - 1
+			if idx < 0 || idx >= len(res.Groups) {
+				return fmt.Errorf("duplicate block references unknown group %d", res.Blocks[i].GroupID)
+			}
+			res.Blocks[i].GroupID = res.Groups[idx].ID
+		}
 		return tx.Create(&res.Blocks).Error
 	})
 }

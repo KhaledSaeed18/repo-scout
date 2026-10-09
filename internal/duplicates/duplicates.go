@@ -251,6 +251,8 @@ func (d *Detector) Detect(ctx context.Context, repoID uint, root string, files [
 			FileCount:  len(filesInComp),
 		}
 		res.Groups = append(res.Groups, group)
+		// Blocks reference their group by 1-based position in res.Groups;
+		// callers map this to the stored ID after inserting the groups.
 		gid := uint(len(res.Groups))
 
 		for file := range filesInComp {

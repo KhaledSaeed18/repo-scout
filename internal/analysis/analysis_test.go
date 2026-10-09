@@ -200,3 +200,37 @@ func TestRunPipelineNonGit(t *testing.T) {
 }
 
 var _ jobs.Reporter = (*reporter)(nil)
+
+func TestDuplicateBlocksReferenceStoredGroups(t *testing.T) {
+	db := testDB(t)
+	// Another repository's group occupies the first IDs, as on any real
+	// database after the first scan.
+	if err := db.Create(&models.DuplicateGroup{RepoID: 99, Lines: 6}).Error; err != nil {
+		t.Fatal(err)
+	}
+	root := makeFixture(t)
+	repo := models.Repository{Name: "demo", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := New(db).Run(context.Background(), repo.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("run pipeline: %v", err)
+	}
+
+	var groups []models.DuplicateGroup
+	db.Where("repo_id = ?", repo.ID).Find(&groups)
+	var blocks []models.DuplicateBlock
+	db.Where("repo_id = ?", repo.ID).Find(&blocks)
+	if len(groups) == 0 || len(blocks) == 0 {
+		t.Fatalf("expected duplicate groups and blocks, got %d and %d", len(groups), len(blocks))
+	}
+	ids := map[uint]bool{}
+	for _, g := range groups {
+		ids[g.ID] = true
+	}
+	for _, b := range blocks {
+		if !ids[b.GroupID] {
+			t.Fatalf("block %s points at group %d, which is not one of this repo's groups", b.FilePath, b.GroupID)
+		}
+	}
+}
