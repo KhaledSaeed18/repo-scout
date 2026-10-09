@@ -132,13 +132,20 @@ func (a *Analyzer) Tags(ctx context.Context, root string) ([]models.Tag, error) 
 	return tags, nil
 }
 
-// StreamLogs streams the full commit history across all refs. For each commit
-// it invokes fn with the commit and the files it changed. The callbacks run
-// in a single goroutine in history order.
+// StreamLogs streams the commit history reachable from branches, tags,
+// remotes, and HEAD. Other refs (stashes, notes, tool checkpoints) are skipped
+// because they are not part of the project's history. For each commit it
+// invokes fn with the commit and the files it changed. The callbacks run in a
+// single goroutine in history order.
 func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.Commit, []FileChange)) error {
 	args := []string{
-		"log", "--all", "--numstat", "--date-order",
+		"log", "--branches", "--tags", "--remotes", "--numstat", "--date-order",
 		"--pretty=format:%x1e%H%x1f%an%x1f%ae%x1f%at%x1f%P%x1f%s%x1e",
+	}
+	// HEAD may be detached; include it only when it resolves so empty
+	// repositories do not fail.
+	if _, err := a.output(ctx, root, "rev-parse", "--verify", "--quiet", "HEAD"); err == nil {
+		args = append(args, "HEAD")
 	}
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
 	stdout, err := cmd.StdoutPipe()

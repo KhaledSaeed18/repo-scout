@@ -5,12 +5,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
 )
 
 func git(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	gitOut(t, dir, args...)
+}
+
+func gitOut(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
 	cmd.Env = append(os.Environ(),
@@ -19,9 +25,11 @@ func git(t *testing.T, dir string, args ...string) {
 		"GIT_COMMITTER_NAME=Test",
 		"GIT_COMMITTER_EMAIL=test@example.com",
 	)
-	if out, err := cmd.CombinedOutput(); err != nil {
+	out, err := cmd.Output()
+	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+	return string(out)
 }
 
 func writeFile(t *testing.T, root, rel, content string) {
@@ -136,6 +144,48 @@ func TestStreamLogs(t *testing.T) {
 	// a.go, b.go, c.go across commits = 3 file changes
 	if totalFiles != 3 {
 		t.Fatalf("expected 3 file changes, got %d", totalFiles)
+	}
+}
+
+func TestStreamLogsIgnoresPrivateRefs(t *testing.T) {
+	root := makeRepo(t)
+	// A tool-owned ref (e.g. an editor checkpoint) must not leak into history.
+	tree := strings.TrimSpace(gitOut(t, root, "rev-parse", "HEAD^{tree}"))
+	hidden := strings.TrimSpace(gitOut(t, root, "commit-tree", tree, "-p", "HEAD", "-m", "checkpoint"))
+	git(t, root, "update-ref", "refs/tools/checkpoints/one", hidden)
+	// A detached HEAD commit is real work and must be included.
+	git(t, root, "checkout", "-q", "--detach")
+	writeFile(t, root, "d.go", "package main\n")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "detached work")
+
+	var messages []string
+	err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) {
+		messages = append(messages, c.Message)
+	})
+	if err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	for _, m := range messages {
+		if m == "checkpoint" {
+			t.Fatalf("private ref commit leaked into history: %v", messages)
+		}
+	}
+	if len(messages) != 5 || messages[0] != "detached work" {
+		t.Fatalf("expected 5 commits starting with detached work, got %v", messages)
+	}
+}
+
+func TestStreamLogsEmptyRepo(t *testing.T) {
+	root := t.TempDir()
+	git(t, root, "init", "-q", "-b", "main", ".")
+	called := false
+	err := New().StreamLogs(context.Background(), root, func(models.Commit, []FileChange) { called = true })
+	if err != nil {
+		t.Fatalf("stream on empty repo: %v", err)
+	}
+	if called {
+		t.Fatalf("expected no commits")
 	}
 }
 
