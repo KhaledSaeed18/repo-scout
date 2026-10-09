@@ -1,6 +1,7 @@
+import { ArrowUp, Folder, FolderGit2, FolderX, House } from 'lucide-react'
 import { useState } from 'react'
-import { ChevronUp, FolderClosed, FolderX, House } from 'lucide-react'
 import {
+  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -9,88 +10,111 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  EmptyState,
-  ScrollArea,
-  Spinner,
 } from '@/components/ui'
-import { useBrowse } from '../lib/api'
+import { useBrowse } from '@/lib/api'
+import { cn } from '@/lib/utils'
+import { Empty, Loading } from './states'
 
+/** Dialog for picking a local folder. Git repositories are marked. */
 export default function FolderPicker({ onSelect }: { onSelect: (path: string) => void }) {
   const [open, setOpen] = useState(false)
   const [path, setPath] = useState('')
-  const { data, isLoading, isError, error } = useBrowse(path, open)
+  const [highlighted, setHighlighted] = useState('')
+  const { data, isPending, isError, error } = useBrowse(path, open)
+
+  const go = (next: string) => {
+    setPath(next)
+    setHighlighted('')
+  }
+  const choose = (p: string) => {
+    onSelect(p)
+    setOpen(false)
+  }
+  const target = highlighted || data?.path || ''
+  const targetIsRepo = highlighted ? !!data?.entries.find((e) => e.path === highlighted)?.isRepo : !!data?.isRepo
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (next) setPath('')
+        if (next) go('')
       }}
     >
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        Browse…
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogTrigger render={<Button type="button" variant="outline" />}>Browse…</DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Choose a folder</DialogTitle>
-          <DialogDescription className="truncate font-mono">
-            {data?.path ?? ' '}
-          </DialogDescription>
+          <DialogTitle>Choose a repository folder</DialogTitle>
+          <DialogDescription>Folders with Git history are marked. Double-click a folder to open it.</DialogDescription>
         </DialogHeader>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1.5">
           <Button
             type="button"
             variant="outline"
             size="icon-sm"
+            aria-label="Up one folder"
             disabled={!data?.parent}
-            onClick={() => data?.parent && setPath(data.parent)}
+            onClick={() => data?.parent && go(data.parent)}
           >
-            <ChevronUp />
+            <ArrowUp />
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setPath('')}>
+          <Button type="button" variant="outline" size="icon-sm" aria-label="Home folder" onClick={() => go('')}>
             <House />
-            Home
           </Button>
+          <p className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground" title={data?.path}>
+            {data?.path}
+          </p>
         </div>
-        <ScrollArea className="h-72 rounded-md border border-border">
-          {isLoading ? (
-            <div className="flex justify-center p-6">
-              <Spinner />
-            </div>
+
+        <div className="h-72 overflow-y-auto rounded-md border bg-card p-1" role="listbox" aria-label="Folders">
+          {isPending ? (
+            <Loading label="Reading folder…" className="justify-center" />
           ) : isError ? (
-            <EmptyState icon={FolderX} title="Can't open this folder" description={(error as Error).message} />
-          ) : !data?.entries.length ? (
-            <EmptyState icon={FolderClosed} title="No subfolders here" />
+            <Empty icon={FolderX} title="Can't open this folder" className="border-0">
+              {error.message}
+            </Empty>
+          ) : data.entries.length === 0 ? (
+            <Empty icon={Folder} title="No folders inside" className="border-0" />
           ) : (
-            <ul className="flex flex-col gap-0.5 p-1">
-              {data.entries.map((entry) => (
-                <li key={entry.path}>
-                  <button
-                    type="button"
-                    onClick={() => setPath(entry.path)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground hover:bg-muted"
-                  >
-                    <FolderClosed className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{entry.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            data.entries.map((entry) => {
+              const Icon = entry.isRepo ? FolderGit2 : Folder
+              return (
+                <button
+                  key={entry.path}
+                  type="button"
+                  role="option"
+                  aria-selected={highlighted === entry.path}
+                  onClick={() => setHighlighted(entry.path)}
+                  onDoubleClick={() => go(entry.path)}
+                  onKeyDown={(e) => e.key === 'Enter' && go(entry.path)}
+                  className={cn(
+                    'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-secondary',
+                    highlighted === entry.path && 'bg-accent text-accent-foreground hover:bg-accent',
+                  )}
+                >
+                  <Icon className={cn('size-4 shrink-0', entry.isRepo ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
+                  <span className="truncate">{entry.name}</span>
+                  {entry.isRepo && (
+                    <Badge variant="outline" className="ml-auto">
+                      Git
+                    </Badge>
+                  )}
+                </button>
+              )
+            })
           )}
-        </ScrollArea>
+        </div>
+
         <DialogFooter>
-          <Button
-            type="button"
-            disabled={!data?.path}
-            onClick={() => {
-              if (data?.path) {
-                onSelect(data.path)
-                setOpen(false)
-              }
-            }}
-          >
-            Select this folder
+          <p className="mr-auto self-center truncate text-xs text-muted-foreground">
+            {target && !targetIsRepo ? 'This folder has no Git history of its own.' : null}
+          </p>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" disabled={!target} onClick={() => choose(target)}>
+            Use this folder
           </Button>
         </DialogFooter>
       </DialogContent>
