@@ -230,3 +230,49 @@ func TestRecoverFinishesCancellingJobs(t *testing.T) {
 		t.Fatalf("expected paused job re-queued after restart, got %s", p.Status)
 	}
 }
+
+type recordingSink struct {
+	mu    sync.Mutex
+	repos []models.Repository
+}
+
+func (s *recordingSink) JobChanged(*models.Job) {}
+func (s *recordingSink) RepoChanged(r *models.Repository) {
+	s.mu.Lock()
+	s.repos = append(s.repos, *r)
+	s.mu.Unlock()
+}
+
+func TestFinishedJobAnnouncesRepository(t *testing.T) {
+	db := testDB(t)
+	repo := models.Repository{Name: "r", Path: "/tmp/r", Status: models.RepoReady}
+	db.Create(&repo)
+	sink := &recordingSink{}
+	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, sink)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = m.Start(ctx) }()
+	if _, err := m.Enqueue(repo.ID, "scan"); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(3 * time.Second)
+	for {
+		sink.mu.Lock()
+		n := len(sink.repos)
+		sink.mu.Unlock()
+		if n > 0 {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("finished scan never announced its repository, so open views stay stale")
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	sink.mu.Lock()
+	defer sink.mu.Unlock()
+	if sink.repos[0].ID != repo.ID {
+		t.Fatalf("announced the wrong repository: %+v", sink.repos[0])
+	}
+}

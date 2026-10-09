@@ -339,6 +339,12 @@ func (m *Manager) run(job *models.Job) {
 	m.db.Model(&models.Job{}).Where("id = ?", job.ID).Updates(final)
 	m.db.First(&cur, job.ID)
 	m.broadcast(&cur)
+
+	// The scan rewrote the repository's data; tell clients to refresh it.
+	var repo models.Repository
+	if m.eventSink != nil && m.db.First(&repo, job.RepoID).Error == nil {
+		m.eventSink.RepoChanged(&repo)
+	}
 }
 
 func (m *Manager) broadcast(job *models.Job) {
