@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useLiveUpdates } from './lib/ws'
 import { cn } from '@/lib/utils'
+import ThemeSync from './components/ThemeSync'
 
 const nav = [
   { to: '/', label: 'Dashboard' },
@@ -19,6 +20,7 @@ export default function App() {
   useLiveUpdates()
   return (
     <div className="flex h-full">
+      <ThemeSync />
       <aside className="flex w-52 flex-col gap-1 border-r border-sidebar-border bg-sidebar p-3">
         <div className="mb-3 px-2 text-sm font-semibold tracking-wide text-sidebar-primary">
           repo-scout
