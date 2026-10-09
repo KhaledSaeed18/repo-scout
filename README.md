@@ -12,6 +12,7 @@ Local-first analytics for any Git repository.</p>
   <img src="https://shieldcn.dev/badge/backend-Go%20%2B%20SQLite-3346d3.svg?variant=secondary&logo=go&logoColor=ffffff" alt="Backend: Go + SQLite" />
   <img src="https://shieldcn.dev/badge/frontend-React%20%2B%20Vite-3346d3.svg?variant=secondary&logo=react&logoColor=ffffff" alt="Frontend: React + Vite" />
   <img src="https://shieldcn.dev/badge/mode-local--first-3346d3.svg?variant=secondary" alt="Mode: local-first" />
+  <a href="LICENSE"><img src="https://shieldcn.dev/badge/license-MIT-3346d3.svg?variant=secondary" alt="License: MIT" /></a>
   <a href="https://github.com/KhaledSaeed18/repo-scout/actions/workflows/ci.yml"><img src="https://shieldcn.dev/github/ci/KhaledSaeed18/repo-scout.svg?workflow=ci.yml&branch=main&variant=secondary" alt="CI status" /></a>
 </p>
 
@@ -154,3 +155,18 @@ repo-scout/
 | Data fetching   | TanStack Query                                    |
 | Graphs          | React Flow                                        |
 | Charts          | Plain SVG and CSS (calendar, punch card, strata)  |
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. The
+[contributing guide](CONTRIBUTING.md) covers setup, how the scan pipeline and
+frontend fit together, the conventions the code follows, and step-by-step
+guides for adding languages, manifest formats and pages. Everyone taking part
+is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+Found a security problem? Please report it privately as described in the
+[security policy](SECURITY.md).
+
+## License
+
+Repo Scout is released under the [MIT License](LICENSE).
