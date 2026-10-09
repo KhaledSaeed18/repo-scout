@@ -42,7 +42,8 @@ export default function RequireRepo({ children }: { children: (repo: Repository)
       </Empty>
     )
   }
-  if (!repo.lastScannedAt && repo.status === 'scanning') return <FirstScan repo={repo} />
+  // Never scanned yet: either waiting for a worker or scanning right now.
+  if (!repo.lastScannedAt && repo.status !== 'failed') return <FirstScan repo={repo} />
   if (!repo.lastScannedAt && repo.status === 'failed') {
     return (
       <Empty icon={FolderGit2} title={`The scan of ${repo.name} failed`} className="mt-4">

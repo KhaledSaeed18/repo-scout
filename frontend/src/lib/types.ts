@@ -2,7 +2,8 @@ export interface Repository {
   id: number
   name: string
   path: string
-  status: 'scanning' | 'ready' | 'failed'
+  /** Empty until a worker picks up the first scan. */
+  status: '' | 'scanning' | 'ready' | 'failed'
   gitRemote: string
   headCommit: string
   defaultBranch: string

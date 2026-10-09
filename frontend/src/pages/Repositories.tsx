@@ -31,7 +31,8 @@ import { formatNumber, formatRelative } from '@/lib/format'
 import { useRepoContext } from '@/lib/repo-context'
 import type { Job, Repository } from '@/lib/types'
 
-const repoStatus: Record<Repository['status'], { label: string; variant: 'success' | 'warning' | 'destructive' }> = {
+const repoStatus: Record<Repository['status'], { label: string; variant: 'success' | 'warning' | 'destructive' | 'secondary' }> = {
+  '': { label: 'Queued', variant: 'secondary' },
   ready: { label: 'Ready', variant: 'success' },
   scanning: { label: 'Scanning', variant: 'warning' },
   failed: { label: 'Failed', variant: 'destructive' },
@@ -146,7 +147,7 @@ function RepositoryTable({ repos }: { repos: Repository[] }) {
       </TableHeader>
       <TableBody>
         {repos.map((r) => {
-          const status = repoStatus[r.status]
+          const status = repoStatus[r.status] ?? { label: r.status, variant: 'secondary' as const }
           return (
             <TableRow key={r.id}>
               <TableCell className="max-w-80">
