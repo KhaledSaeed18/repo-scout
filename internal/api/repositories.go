@@ -146,40 +146,28 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	folder := r.URL.Query().Get("folder")
-	if folder == "" {
-		folder = ""
-	}
-	var dirs []string
-	if err := s.db.Model(&models.File{}).
-		Where("repo_id = ? AND folder = ?", id, folder).
-		Distinct().Pluck("name", &dirs).Error; err != nil {
-		writeErr(w, http.StatusInternalServerError, "tree folders: "+err.Error())
-		return
-	}
-	// Subfolders: distinct top-level segments under the requested folder.
+	// Subfolders: distinct next-level segments under the requested folder.
 	prefix := folder
 	if prefix != "" {
 		prefix += "/"
 	}
-	var subs []struct {
-		Folder string
-	}
+	var folders []string
 	if err := s.db.Model(&models.File{}).
-		Where("repo_id = ? AND folder LIKE ?", id, prefix+"%").Distinct().Pluck("folder", &subs).Error; err != nil {
+		Where("repo_id = ? AND folder LIKE ? ESCAPE '\\'", id, escapeLike(prefix)+"%").
+		Distinct().Pluck("folder", &folders).Error; err != nil {
 		writeErr(w, http.StatusInternalServerError, "tree subfolders: "+err.Error())
 		return
 	}
 	subSet := map[string]bool{}
-	for _, sub := range subs {
-		rest := strings.TrimPrefix(sub.Folder, prefix)
-		if rest == "" {
+	for _, f := range folders {
+		rest, ok := strings.CutPrefix(f, prefix)
+		if !ok || rest == "" {
 			continue
 		}
 		if i := strings.IndexByte(rest, '/'); i >= 0 {
-			subSet[rest[:i]] = true
-		} else {
-			subSet[rest] = true
+			rest = rest[:i]
 		}
+		subSet[rest] = true
 	}
 	subfolders := sortedKeys(subSet)
 
@@ -297,6 +285,11 @@ func queryInt(r *http.Request, key string, def, max int) int {
 		return max
 	}
 	return n
+}
+
+// escapeLike escapes SQL LIKE wildcards so s matches literally (with ESCAPE '\\').
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 func sortedKeys(set map[string]bool) []string {

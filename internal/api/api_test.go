@@ -261,3 +261,23 @@ func TestMetricsAggregatesAndCapsLists(t *testing.T) {
 		t.Fatalf("expected 2 Go files, got %v", langs)
 	}
 }
+
+func TestTreeEscapesLikeWildcards(t *testing.T) {
+	ts, srv := newTestServer(t)
+	for _, f := range []models.File{
+		{RepoID: 1, Path: "a_b/x/one.go", Name: "one.go", Folder: "a_b/x"},
+		{RepoID: 1, Path: "axb/y/two.go", Name: "two.go", Folder: "axb/y"},
+	} {
+		if err := srv.db.Create(&f).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	resp, body := get(t, ts, "/api/repositories/1/tree?folder=a_b")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("tree: %d %v", resp.StatusCode, body)
+	}
+	folders := body["folders"].([]any)
+	if len(folders) != 1 || folders[0] != "x" {
+		t.Fatalf("expected only subfolder x, got %v", folders)
+	}
+}
