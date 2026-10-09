@@ -2,8 +2,13 @@ package ws
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/models"
 )
@@ -39,4 +44,24 @@ func TestEventSink(t *testing.T) {
 	h.JobChanged(job)
 	repo := &models.Repository{ID: 2, Status: models.RepoReady}
 	h.RepoChanged(repo)
+}
+
+func TestUpgradeRejectsCrossOrigin(t *testing.T) {
+	h := New()
+	srv := httptest.NewServer(http.HandlerFunc(h.HandleUpgrade))
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	header := http.Header{"Origin": []string{"https://evil.example"}}
+	if conn, _, err := websocket.DefaultDialer.Dial(url, header); err == nil {
+		_ = conn.Close()
+		t.Fatal("expected cross-origin upgrade to be rejected")
+	}
+
+	header = http.Header{"Origin": []string{srv.URL}}
+	conn, _, err := websocket.DefaultDialer.Dial(url, header)
+	if err != nil {
+		t.Fatalf("same-origin upgrade failed: %v", err)
+	}
+	_ = conn.Close()
 }

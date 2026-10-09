@@ -31,10 +31,11 @@ type client struct {
 	send chan []byte
 }
 
+// upgrader uses gorilla's default origin check: browsers may only connect
+// from the same host, so arbitrary websites cannot subscribe to local events.
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // New builds a Hub.
