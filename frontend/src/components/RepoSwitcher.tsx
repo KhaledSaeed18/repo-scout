@@ -1,11 +1,18 @@
 import { Plus } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui'
 import { useRepoContext } from '@/lib/repo-context'
 
 /** Picks the repository every page in the app is looking at. */
 export default function RepoSwitcher() {
   const { repos, repo, setRepoId } = useRepoContext()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  // Query params such as ?file= describe the previous repository.
+  const switchTo = (id: number) => {
+    setRepoId(id)
+    navigate(pathname, { replace: true })
+  }
 
   if (!repo) {
     return (
@@ -21,7 +28,7 @@ export default function RepoSwitcher() {
 
   const items = repos.map((r) => ({ value: String(r.id), label: r.name }))
   return (
-    <Select items={items} value={String(repo.id)} onValueChange={(v) => v && setRepoId(Number(v))}>
+    <Select items={items} value={String(repo.id)} onValueChange={(v) => v && switchTo(Number(v))}>
       <SelectTrigger aria-label="Repository" className="w-full bg-transparent px-2.5 py-2 hover:bg-sidebar-accent data-[size=default]:h-auto">
         <SelectValue>
           {() => (

@@ -1,5 +1,5 @@
 import { FolderGit2, Radar } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { buttonVariants, Progress } from '@/components/ui'
 import { useJobs } from '@/lib/api'
@@ -54,5 +54,7 @@ export default function RequireRepo({ children }: { children: (repo: Repository)
       </Empty>
     )
   }
-  return <>{children(repo)}</>
+  // Keyed by repository so page state (filters, paging, selections) starts
+  // fresh when the selection changes.
+  return <Fragment key={repo.id}>{children(repo)}</Fragment>
 }
