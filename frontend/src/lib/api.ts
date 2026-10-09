@@ -212,6 +212,22 @@ export const useMetrics = (id: number, limit = 20) =>
     enabled: id > 0,
   })
 
+export interface SearchParams {
+  query: string
+  mode: string
+  caseSensitive: boolean
+  wholeWord: boolean
+}
+
+export const useSearch = (repoId: number, p: SearchParams) =>
+  useQuery({
+    queryKey: ['search', repoId, p],
+    queryFn: () =>
+      api.search({ repo: repoId, query: p.query, mode: p.mode, case: p.caseSensitive, word: p.wholeWord, limit: 100 }),
+    enabled: repoId > 0 && p.query.trim() !== '',
+    retry: false,
+  })
+
 export const useBrowse = (path: string, enabled: boolean) =>
   useQuery({
     queryKey: ['browse', path],
