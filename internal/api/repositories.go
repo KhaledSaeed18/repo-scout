@@ -110,14 +110,16 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 	if f := r.URL.Query().Get("language"); f != "" {
 		q = q.Where("language = ?", f)
 	}
+	// Every order ends on the unique path so offset paging never repeats or
+	// skips rows that tie on the sort key.
 	sortBy := r.URL.Query().Get("sort")
 	switch sortBy {
 	case "loc":
-		q = q.Order("lines_code DESC")
+		q = q.Order("lines_code DESC, path ASC")
 	case "complexity":
-		q = q.Order("complexity DESC")
+		q = q.Order("complexity DESC, path ASC")
 	case "name":
-		q = q.Order("name ASC")
+		q = q.Order("name ASC, path ASC")
 	case "":
 		q = q.Order("path ASC")
 	default:
