@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/KhaledSaeed18/repo-scout/security/advisories/new
+    about: Report it privately. Please do not open a public issue for security problems.
+  - name: Contributing guide
+    url: https://github.com/KhaledSaeed18/repo-scout/blob/main/CONTRIBUTING.md
+    about: Setup, architecture, conventions and how to send a change.

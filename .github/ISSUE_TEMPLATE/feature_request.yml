@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new view, metric, language or improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to find out
+      description: The question about a codebase you cannot answer today, or the task that is harder than it should be.
+      placeholder: I want to see which folders change together most often, so I can ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How it could work in Repo Scout. Sketches and screenshots of other tools are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+      description: Workarounds or other tools you use for this now.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Scanning and repositories
+        - History
+        - Code (files, search, metrics, duplicates)
+        - Structure (architecture, dependencies)
+        - Language or manifest support
+        - Settings, exports or other
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to work on this myself.
+          required: false

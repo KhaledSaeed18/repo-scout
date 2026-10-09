@@ -1,0 +1,20 @@
+name: Question
+description: Ask how something works or how to use it.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [README](https://github.com/KhaledSaeed18/repo-scout#readme) and the [contributing guide](https://github.com/KhaledSaeed18/repo-scout/blob/main/CONTRIBUTING.md) cover setup, configuration and how scans work.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you have tried
+    validations:
+      required: false
