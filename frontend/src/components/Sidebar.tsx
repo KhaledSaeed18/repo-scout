@@ -9,6 +9,7 @@ import {
   Package,
   Search,
   Settings2,
+  Users,
   Waypoints,
   type LucideIcon,
 } from 'lucide-react'
@@ -30,7 +31,8 @@ const groups: { label?: string; items: NavItem[] }[] = [
     label: 'History',
     items: [
       { to: '/activity', label: 'Activity', icon: CalendarDays },
-      { to: '/git', label: 'Git history', icon: GitCommitHorizontal },
+      { to: '/commits', label: 'Commits', icon: GitCommitHorizontal },
+      { to: '/git', label: 'Git history', icon: Users },
     ],
   },
   {

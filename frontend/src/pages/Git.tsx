@@ -1,4 +1,4 @@
-import { Activity, Flame, FolderGit2, GitBranch, GitCommitHorizontal, Tag, Users } from 'lucide-react'
+import { Activity, Flame, FolderGit2, GitBranch, Tag, Users } from 'lucide-react'
 import { useState } from 'react'
 import {
   Bar,
@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
-import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
+import { useContributors, useHeatmap, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
 import { useRepoContext } from '@/lib/repo-context'
 import RepoSelector from '../components/RepoSelector'
 
@@ -171,82 +171,6 @@ function ContributorsChart({
         </ResponsiveContainer>
       </CardContent>
     </Card>
-  )
-}
-
-function CommitsView({ repoId }: { repoId: number }) {
-  const { data, isLoading } = useCommits(repoId, 200)
-  if (isLoading) return <Spinner />
-  const commits = data?.commits ?? []
-  if (!commits.length) return <EmptyState icon={GitCommitHorizontal} title="No commits" />
-  return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Hash</TableHead>
-            <TableHead>Author</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Message</TableHead>
-            <TableHead>Files</TableHead>
-            <TableHead>+</TableHead>
-            <TableHead>−</TableHead>
-            <TableHead>Merge</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {commits.map((c) => (
-            <TableRow key={c.hash}>
-              <TableCell><code className="text-xs text-primary">{c.hash.slice(0, 8)}</code></TableCell>
-              <TableCell>{c.author}</TableCell>
-              <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
-              <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
-              <TableCell>{c.filesChanged}</TableCell>
-              <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
-              <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
-              <TableCell>{c.isMerge ? <span className="text-chart-3 text-xs">✓</span> : ''}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-}
-
-function LargestCommitsView({ repoId }: { repoId: number }) {
-  const { data, isLoading } = useLargestCommits(repoId)
-  if (isLoading) return <Spinner />
-  const commits = data?.commits ?? []
-  if (!commits.length) return <EmptyState icon={GitCommitHorizontal} title="No commits" />
-  return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Hash</TableHead>
-            <TableHead>Author</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Message</TableHead>
-            <TableHead>Files</TableHead>
-            <TableHead>+</TableHead>
-            <TableHead>−</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {commits.map((c) => (
-            <TableRow key={c.hash}>
-              <TableCell><code className="text-xs text-primary">{c.hash.slice(0, 8)}</code></TableCell>
-              <TableCell>{c.author}</TableCell>
-              <TableCell>{new Date(c.date).toLocaleDateString()}</TableCell>
-              <TableCell><span className="max-w-96 truncate">{c.message}</span></TableCell>
-              <TableCell>{c.filesChanged}</TableCell>
-              <TableCell><span className="text-chart-2">+{c.insertions}</span></TableCell>
-              <TableCell><span className="text-destructive">−{c.deletions}</span></TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
   )
 }
 
@@ -421,7 +345,7 @@ function ContributorsTab({ repoId }: { repoId: number }) {
 
 export default function Git() {
   const { repoId } = useRepoContext()
-  const [tab, setTab] = useState<'activity' | 'commits' | 'contributors' | 'largest' | 'ownership' | 'branches-tags'>('activity')
+  const [tab, setTab] = useState<'activity' | 'contributors' | 'ownership' | 'branches-tags'>('activity')
   const repo = useRepo(repoId).data
   if (repoId === 0) return <EmptyState icon={FolderGit2} title="Scan a repository first" />
   return (
@@ -433,15 +357,11 @@ export default function Git() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full justify-start">
           <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="commits">Commits</TabsTrigger>
-          <TabsTrigger value="largest">Largest</TabsTrigger>
           <TabsTrigger value="contributors">Contributors</TabsTrigger>
           <TabsTrigger value="ownership">Ownership</TabsTrigger>
           <TabsTrigger value="branches-tags">Branches & Tags</TabsTrigger>
         </TabsList>
         <TabsContent value="activity"><ActivityTab repoId={repoId} /></TabsContent>
-        <TabsContent value="commits"><CommitsView repoId={repoId} /></TabsContent>
-        <TabsContent value="largest"><LargestCommitsView repoId={repoId} /></TabsContent>
         <TabsContent value="contributors"><ContributorsTab repoId={repoId} /></TabsContent>
         <TabsContent value="ownership"><OwnershipView repoId={repoId} /></TabsContent>
         <TabsContent value="branches-tags"><BranchesTagsView repoId={repoId} /></TabsContent>

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   Architecture,
   Branch,
@@ -63,8 +63,8 @@ export const api = {
   },
   tree: (id: number, folder: string) =>
     get<TreeResponse>(`/api/repositories/${id}/tree?folder=${encodeURIComponent(folder)}`),
-  commits: (id: number, limit = 100) =>
-    get<{ commits: Commit[] }>(`/api/repositories/${id}/commits?limit=${limit}`),
+  commits: (id: number, limit = 100, offset = 0) =>
+    get<{ commits: Commit[] }>(`/api/repositories/${id}/commits?limit=${limit}&offset=${offset}`),
   contributors: (id: number) =>
     get<{ contributors: Contributor[] }>(`/api/repositories/${id}/contributors`),
   largestCommits: (id: number) =>
@@ -128,10 +128,16 @@ export const useTree = (id: number, folder: string) =>
     enabled: id > 0,
   })
 
-export const useCommits = (id: number, limit = 100) =>
-  useQuery({
+const commitPage = 100
+
+/** Commit feed, newest first, loaded a page at a time. */
+export const useCommits = (id: number) =>
+  useInfiniteQuery({
     queryKey: ['commits', id],
-    queryFn: () => api.commits(id, limit),
+    queryFn: ({ pageParam }) => api.commits(id, commitPage, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) =>
+      last.commits.length < commitPage ? undefined : pages.length * commitPage,
     enabled: id > 0,
   })
 
