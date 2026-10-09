@@ -45,15 +45,17 @@ click through instead of a wall of terminal output.
 - Repository scanner that handles 10-file projects up to 100k-file monorepos
 - Language detection (Go, Rust, Python, Java, Kotlin, TypeScript, JavaScript,
   PHP, C#, C++, C, Swift) with LOC / comments / blank-line breakdown
-- Git analytics: commit frequency, contributors, streaks, heatmap, largest
-  commits, merges, file ownership
+- Git analytics: commit calendar, hour-of-week punch card, streaks,
+  contributors, largest commits, merges, file ownership, branches and tags,
+  all on each author's local clock
 - Dependency graphs (package.json, go.mod, Cargo.toml, pom.xml, composer.json,
   requirements.txt)
-- Lazy-loaded, searchable, virtualized file tree, with a local folder picker
-  to choose a repository to scan
+- Lazy-loaded file tree with per-file size, complexity and history, plus a
+  sortable table of every file, and a local folder picker that marks Git
+  repositories
 - Instant indexed search: filename, folder, extension, content, regex,
   case-sensitive, whole-word
-- Duplicate code detection with similarity scores and line highlighting
+- Duplicate code detection with similarity scores and linked locations
 - Architecture graphs (folder / module / import) with circular dependency
   detection, unused modules, and dead files, exportable as SVG
 - Metrics: cyclomatic complexity, function length, nesting, imports/exports,
@@ -61,7 +63,8 @@ click through instead of a wall of terminal output.
 - Background jobs with pause / resume / cancel, queue, worker pool, progress,
   and crash recovery
 - Live WebSocket updates
-- CSV/JSON export, dark mode, resizable panels
+- CSV/JSON export of files, commits and contributors
+- Light, dark, or system theme
 
 ## How it works
 
@@ -130,9 +133,8 @@ repo-scout/
 │   ├── jobs/               # background job queue, worker pool, pause/resume/cancel
 │   ├── ws/                 # WebSocket hub + event bus
 │   ├── api/                # chi router, HTTP handlers, REST + WS endpoints
-│   └── exports/            # CSV/JSON exporters
+│   └── export/             # CSV/JSON exporters
 ├── frontend/               # React + Vite + TS + Tailwind + shadcn/ui
-├── testdata/               # repository fixtures for tests
 └── scripts/dev.sh          # single-command run
 ```
 
@@ -146,4 +148,4 @@ repo-scout/
 | Frontend        | React + Vite + TypeScript + Tailwind + shadcn/ui  |
 | Data fetching   | TanStack Query                                    |
 | Graphs          | React Flow                                        |
-| Charts          | Recharts                                          |
+| Charts          | Plain SVG and CSS (calendar, punch card, strata)  |
