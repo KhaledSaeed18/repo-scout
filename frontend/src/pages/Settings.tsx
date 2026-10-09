@@ -1,5 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button, Input, Spinner } from '@/components/ui'
 import TagInput from '@/components/TagInput'
 import { PageHeader, Section } from '@/components/layout'
@@ -80,8 +80,9 @@ function problems(s: SettingsType): string[] {
 
 function SettingsForm({ saved }: { saved: SettingsType }) {
   const save = useSaveSettings()
+  // Seeded once; later refetches (such as after a theme change) must not wipe
+  // unsaved edits. The form resets only from its own successful save.
   const [form, setForm] = useState(saved)
-  useEffect(() => setForm(saved), [saved])
   const set = <K extends keyof SettingsType>(key: K, value: SettingsType[K]) => setForm((f) => ({ ...f, [key]: value }))
 
   const dirty = JSON.stringify({ ...form, theme: '' }) !== JSON.stringify({ ...saved, theme: '' })
@@ -99,7 +100,7 @@ function SettingsForm({ saved }: { saved: SettingsType }) {
       noValidate
       onSubmit={(e) => {
         e.preventDefault()
-        if (!errors.length) save.mutate({ ...form, theme })
+        if (!errors.length) save.mutate({ ...form, theme }, { onSuccess: (next) => setForm(next) })
       }}
     >
       <Section title="Appearance">
