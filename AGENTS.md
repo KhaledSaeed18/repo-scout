@@ -8,8 +8,8 @@ first, before making changes.
 Repo Scout — a local-first Git repository analytics platform.
 
 - Backend: Go + chi + SQLite (GORM). Everything offline.
-- Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui + TanStack Query
-  + React Flow + Recharts.
+- Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui (Base UI) +
+  TanStack Query + React Flow. Charts are plain SVG/CSS; Vitest for unit tests.
 
 ## Commands
 
@@ -30,9 +30,11 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
 - `cmd/api` — thin composition root; wires dependencies, starts the server.
 - `internal/*` — one package per concern. Packages depend on interfaces, not
   each other's internals.
-- `frontend/` — the React app. Pages in `frontend/src/pages`, UI primitives in
-  `frontend/src/components/ui` (shadcn). API + WebSocket clients in
-  `frontend/src/lib`.
+- `frontend/` — the React app. Pages in `frontend/src/pages`, grouped as the
+  sidebar is: `history/`, `code/`, `structure/`. Shared page building blocks in
+  `frontend/src/components` (`layout.tsx`, `states.tsx`, `RequireRepo.tsx`), UI
+  primitives in `frontend/src/components/ui` (shadcn). API + WebSocket clients
+  and pure, unit-tested helpers in `frontend/src/lib`.
 
 ## Conventions
 
@@ -45,6 +47,24 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
 - No placeholder UI, no unfinished pages, no dead exports.
 - TypeScript: strict mode, shared types generated alongside the API contracts
   in `frontend/src/lib/types.ts`.
+- Pure frontend logic (formatting, calendar, graph layout, highlighting) lives
+  in `frontend/src/lib/*.ts` with a `*.test.ts` beside it.
+
+## Interface design
+
+The UI follows a "survey map" system. Keep new work inside it:
+
+- Colors come only from the tokens in `frontend/src/index.css` (light and dark).
+  Ultramarine `primary` marks interactive things; the `contour-*` ramp is for
+  activity intensity; `chart-*` for categories. No hard-coded colors.
+- Type: Barlow for UI, Barlow Semi Condensed for headings and figures,
+  JetBrains Mono only for code, paths and hashes. Numbers use tabular figures.
+- Pages are a `PageHeader` followed by `Section`s, not grids of cards. Data
+  states go through `QueryView` / `Loading` / `ErrorNotice` / `Empty`, and
+  repository pages are wrapped in `RequireRepo`.
+- Copy is sentence case and plain. No all-caps labels, no "A · B" meta strings.
+  Empty states say what to do next; errors say what failed.
+- Every page must work at 390px wide and in both themes.
 
 ## Git rules
 
