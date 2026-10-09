@@ -98,6 +98,9 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := s.db.Model(&models.File{}).Where("repo_id = ?", id)
+	if f := r.URL.Query().Get("path"); f != "" {
+		q = q.Where("path = ?", f)
+	}
 	if f := r.URL.Query().Get("folder"); f != "" {
 		q = q.Where("folder = ?", f)
 	}

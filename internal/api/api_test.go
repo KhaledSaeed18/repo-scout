@@ -353,3 +353,15 @@ func TestWritesRequireJSONContentType(t *testing.T) {
 		t.Fatalf("json put: expected 200, got %d", resp.StatusCode)
 	}
 }
+
+func TestFilesFilterByPath(t *testing.T) {
+	ts, _ := newTestServer(t)
+	resp, body := get(t, ts, "/api/repositories/1/files?path=util/util.go")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("files: %d %v", resp.StatusCode, body)
+	}
+	files := body["files"].([]any)
+	if len(files) != 1 || files[0].(map[string]any)["path"] != "util/util.go" || body["total"].(float64) != 1 {
+		t.Fatalf("expected exactly util/util.go, got %v", body)
+	}
+}
