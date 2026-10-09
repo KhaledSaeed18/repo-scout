@@ -4,6 +4,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,6 +41,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(requireJSONWrites)
 
 	r.Get("/api/health", s.handleHealth)
 	r.Get("/api/ws", s.handleWS)
@@ -84,6 +86,23 @@ func (s *Server) Router() http.Handler {
 	})
 
 	return r
+}
+
+// requireJSONWrites rejects body-carrying writes that are not JSON. Browsers
+// send form and text/plain POSTs cross-site without a CORS preflight, so this
+// keeps other websites from driving the local API.
+func requireJSONWrites(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost, http.MethodPut, http.MethodPatch:
+			mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+			if err != nil || mt != "application/json" {
+				writeErr(w, http.StatusUnsupportedMediaType, "content type must be application/json")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 type errorBody struct {

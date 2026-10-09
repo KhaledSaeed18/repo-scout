@@ -312,3 +312,37 @@ func TestDuplicatesGroupsBlocks(t *testing.T) {
 		t.Fatalf("expected 1 block in second group, got %v", second)
 	}
 }
+
+func TestWritesRequireJSONContentType(t *testing.T) {
+	ts, _ := newTestServer(t)
+	// A cross-site form or text/plain POST is a "simple" request that skips
+	// CORS preflight; it must be refused before reaching the handler.
+	for _, ct := range []string{"text/plain", "application/x-www-form-urlencoded", ""} {
+		req, err := http.NewRequest(http.MethodPost, ts.URL+"/api/repositories", strings.NewReader(`{"path":"/tmp"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ct != "" {
+			req.Header.Set("Content-Type", ct)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusUnsupportedMediaType {
+			t.Fatalf("content-type %q: expected 415, got %d", ct, resp.StatusCode)
+		}
+	}
+
+	req, _ := http.NewRequest(http.MethodPut, ts.URL+"/api/settings", strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("json put: expected 200, got %d", resp.StatusCode)
+	}
+}
