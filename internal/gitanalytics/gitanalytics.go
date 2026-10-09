@@ -3,6 +3,7 @@
 package gitanalytics
 
 import (
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -96,63 +97,95 @@ func ComputeHeatmap(db *gorm.DB, repoID uint) (Heatmap, error) {
 	for d, n := range byDay {
 		days = append(days, Day{Date: d, Count: n})
 	}
-	sortDays(days)
+	sort.Slice(days, func(i, j int) bool { return days[i].Date < days[j].Date })
 	h.Daily = days
 	return h, nil
 }
 
-// Streaks analyzes consecutive-day activity for one contributor.
-func Streaks(db *gorm.DB, repoID uint, email string) (StreaksResult, error) {
+// Streaks analyzes consecutive-day activity for one contributor. A streak is
+// only reported as current when it reaches today or yesterday relative to now.
+func Streaks(db *gorm.DB, repoID uint, email string, now time.Time) (StreaksResult, error) {
 	var commits []models.Commit
 	err := db.Select("date").Where("repo_id = ? AND email = ?", repoID, email).
 		Order("date ASC").Find(&commits).Error
 	if err != nil {
 		return StreaksResult{}, err
 	}
-	res := StreaksResult{Email: email, All: []Streak{}}
-	if len(commits) == 0 {
-		return res, nil
+	dates := make([]time.Time, len(commits))
+	for i, c := range commits {
+		dates[i] = c.Date
+	}
+	return streaksFromDates(email, dates, now), nil
+}
+
+// AllStreaks computes streaks for every contributor of a repository in a
+// single pass, ordered by longest streak (then commits) descending.
+func AllStreaks(db *gorm.DB, repoID uint, now time.Time) ([]StreaksResult, error) {
+	var commits []models.Commit
+	err := db.Select("email", "date").Where("repo_id = ?", repoID).
+		Order("date ASC").Find(&commits).Error
+	if err != nil {
+		return nil, err
+	}
+	byEmail := map[string][]time.Time{}
+	for _, c := range commits {
+		byEmail[c.Email] = append(byEmail[c.Email], c.Date)
+	}
+	out := make([]StreaksResult, 0, len(byEmail))
+	for email, dates := range byEmail {
+		out = append(out, streaksFromDates(email, dates, now))
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Longest.Days != out[j].Longest.Days {
+			return out[i].Longest.Days > out[j].Longest.Days
+		}
+		if out[i].TotalCommits != out[j].TotalCommits {
+			return out[i].TotalCommits > out[j].TotalCommits
+		}
+		return out[i].Email < out[j].Email
+	})
+	return out, nil
+}
+
+// streaksFromDates derives streaks from commit timestamps (any order).
+func streaksFromDates(email string, dates []time.Time, now time.Time) StreaksResult {
+	res := StreaksResult{Email: email, All: []Streak{}, TotalCommits: len(dates)}
+	if len(dates) == 0 {
+		return res
 	}
 	seen := map[string]bool{}
-	for _, c := range commits {
-		seen[c.Date.Format("2006-01-02")] = true
-		res.TotalCommits++
+	for _, d := range dates {
+		seen[d.UTC().Format(dayLayout)] = true
 	}
-	activeDays := make([]string, 0, len(seen))
+	days := make([]string, 0, len(seen))
 	for d := range seen {
-		activeDays = append(activeDays, d)
+		days = append(days, d)
 	}
-	sortDaysString(activeDays)
-	res.ActiveDays = len(activeDays)
+	sort.Strings(days)
+	res.ActiveDays = len(days)
 
-	var current *Streak
-	var longest Streak
-	start := activeDays[0]
-	prev, _ := time.Parse("2006-01-02", activeDays[0])
-	for _, d := range activeDays[1:] {
-		cur, _ := time.Parse("2006-01-02", d)
-		if cur.Sub(prev) > 24*time.Hour {
-			s := Streak{Start: start, End: prev.Format("2006-01-02"), Days: daysBetween(start, prev.Format("2006-01-02"))}
-			res.All = append(res.All, s)
-			if s.Days > longest.Days {
-				longest = s
-			}
+	start, prev := days[0], days[0]
+	closeStreak := func(end string) {
+		st := Streak{Start: start, End: end, Days: daysBetween(start, end)}
+		res.All = append(res.All, st)
+		if st.Days > res.Longest.Days {
+			res.Longest = st
+		}
+	}
+	for _, d := range days[1:] {
+		if daysBetween(prev, d) > 2 {
+			closeStreak(prev)
 			start = d
 		}
-		prev = cur
+		prev = d
 	}
-	s := Streak{Start: start, End: prev.Format("2006-01-02"), Days: daysBetween(start, prev.Format("2006-01-02"))}
-	res.All = append(res.All, s)
-	if s.Days > longest.Days {
-		longest = s
+	closeStreak(prev)
+
+	last := res.All[len(res.All)-1]
+	if daysBetween(last.End, now.UTC().Format(dayLayout)) <= 2 {
+		res.Current = last
 	}
-	current = &s
-	if longest.Days == 0 {
-		longest = s
-	}
-	res.Longest = longest
-	res.Current = *current
-	return res, nil
+	return res
 }
 
 // Ownership aggregates primary-authorship across files.
@@ -170,7 +203,12 @@ func ComputeOwnership(db *gorm.DB, repoID uint) (Ownership, error) {
 	for a, n := range counts {
 		o.ByAuthor = append(o.ByAuthor, OwnerSummary{Author: a, Files: n, Share: float64(n) / float64(len(files))})
 	}
-	sortOwners(o.ByAuthor)
+	sort.Slice(o.ByAuthor, func(i, j int) bool {
+		if o.ByAuthor[i].Files != o.ByAuthor[j].Files {
+			return o.ByAuthor[i].Files > o.ByAuthor[j].Files
+		}
+		return o.ByAuthor[i].Author < o.ByAuthor[j].Author
+	})
 	return o, nil
 }
 
@@ -223,32 +261,11 @@ func Leaderboard(db *gorm.DB, repoID uint) ([]models.Contributor, error) {
 	return rows, err
 }
 
-func sortDays(days []Day) {
-	for i := 1; i < len(days); i++ {
-		for j := i; j > 0 && days[j].Date < days[j-1].Date; j-- {
-			days[j], days[j-1] = days[j-1], days[j]
-		}
-	}
-}
+const dayLayout = "2006-01-02"
 
-func sortDaysString(days []string) {
-	for i := 1; i < len(days); i++ {
-		for j := i; j > 0 && days[j] < days[j-1]; j-- {
-			days[j], days[j-1] = days[j-1], days[j]
-		}
-	}
-}
-
-func sortOwners(owners []OwnerSummary) {
-	for i := 1; i < len(owners); i++ {
-		for j := i; j > 0 && owners[j].Files > owners[j-1].Files; j-- {
-			owners[j], owners[j-1] = owners[j-1], owners[j]
-		}
-	}
-}
-
+// daysBetween counts calendar days from start to end inclusive.
 func daysBetween(start, end string) int {
-	s, _ := time.Parse("2006-01-02", start)
-	e, _ := time.Parse("2006-01-02", end)
+	s, _ := time.Parse(dayLayout, start)
+	e, _ := time.Parse(dayLayout, end)
 	return int(e.Sub(s)/24/time.Hour) + 1
 }

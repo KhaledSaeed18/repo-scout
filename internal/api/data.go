@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/architecture"
 	"github.com/KhaledSaeed18/repo-scout/internal/gitanalytics"
@@ -22,19 +23,11 @@ func (s *Server) handleHeatmap(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "heatmap: "+err.Error())
 		return
 	}
-	var emails []string
-	if err := s.db.Model(&models.Contributor{}).Where("repo_id = ?", id).Pluck("email", &emails).Error; err != nil {
-		writeErr(w, http.StatusInternalServerError, "heatmap emails: "+err.Error())
+	streaks, err := gitanalytics.AllStreaks(s.db, id, time.Now())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "streaks: "+err.Error())
 		return
 	}
-	streaks := make([]gitanalytics.StreaksResult, 0, len(emails))
-	for _, email := range emails {
-		sr, err := gitanalytics.Streaks(s.db, id, email)
-		if err == nil {
-			streaks = append(streaks, sr)
-		}
-	}
-	sort.Slice(streaks, func(i, j int) bool { return streaks[i].Longest.Days > streaks[j].Longest.Days })
 	writeJSON(w, http.StatusOK, map[string]any{"heatmap": h, "streaks": streaks})
 }
 

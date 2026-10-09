@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -119,7 +120,7 @@ func TestHeatmap(t *testing.T) {
 
 func TestStreaks(t *testing.T) {
 	db, repo := newRepo(t)
-	s, err := Streaks(db, repo.ID, "alice@example.com")
+	s, err := Streaks(db, repo.ID, "alice@example.com", time.Date(2024, 1, 6, 9, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,6 +138,48 @@ func TestStreaks(t *testing.T) {
 	}
 	if s.Current.Days != 1 || s.Current.Start != "2024-01-05" {
 		t.Fatalf("unexpected current streak %+v", s.Current)
+	}
+}
+
+func TestStreaksStaleIsNotCurrent(t *testing.T) {
+	db, repo := newRepo(t)
+	s, err := Streaks(db, repo.ID, "alice@example.com", time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Current.Days != 0 {
+		t.Fatalf("expected no current streak a year later, got %+v", s.Current)
+	}
+	if s.Longest.Days != 2 {
+		t.Fatalf("longest streak must not depend on now, got %+v", s.Longest)
+	}
+}
+
+func TestAllStreaks(t *testing.T) {
+	db, repo := newRepo(t)
+	all, err := AllStreaks(db, repo.ID, time.Date(2024, 1, 6, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 1 || all[0].Email != "alice@example.com" || all[0].TotalCommits != 3 {
+		t.Fatalf("unexpected streaks %+v", all)
+	}
+	if all[0].Current.Start != "2024-01-05" {
+		t.Fatalf("unexpected current streak %+v", all[0].Current)
+	}
+}
+
+func TestStreaksFromDatesBridgesConsecutiveDays(t *testing.T) {
+	d := func(day int) time.Time { return time.Date(2024, 2, day, 12, 0, 0, 0, time.UTC) }
+	got := streaksFromDates("x", []time.Time{d(3), d(1), d(2), d(2), d(9)}, d(9))
+	if got.ActiveDays != 4 || got.TotalCommits != 5 {
+		t.Fatalf("unexpected counts %+v", got)
+	}
+	if got.Longest.Days != 3 || got.Longest.Start != "2024-02-01" || got.Longest.End != "2024-02-03" {
+		t.Fatalf("unexpected longest %+v", got.Longest)
+	}
+	if got.Current.Days != 1 || got.Current.Start != "2024-02-09" {
+		t.Fatalf("unexpected current %+v", got.Current)
 	}
 }
 
