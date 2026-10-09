@@ -15,7 +15,7 @@ import Files from './pages/code/Files'
 import Search from './pages/code/Search'
 import Duplicates from './pages/Duplicates'
 import Architecture from './pages/Architecture'
-import Metrics from './pages/Metrics'
+import Metrics from './pages/code/Metrics'
 import Dependencies from './pages/Dependencies'
 import Settings from './pages/Settings'
 
