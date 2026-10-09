@@ -43,6 +43,10 @@ func TestScan(t *testing.T) {
 	mkFile(t, root, "node_modules/x.js", "ignore me\n")
 	mkFile(t, root, "data.bin", string([]byte{1, 0, 2, 3}))
 	mkFile(t, root, "notes/readme.txt", "hello\n")
+	// Operating-system metadata is never part of a project.
+	mkFile(t, root, ".DS_Store", "\x00\x00\x00\x01Bud1")
+	mkFile(t, root, "notes/Thumbs.db", "junk")
+	mkFile(t, root, "util/._helper.py", "\x00\x05\x16\x07")
 
 	db := testDB(t)
 	repo := models.Repository{Name: "r", Path: root}

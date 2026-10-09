@@ -89,6 +89,9 @@ func (s *Scanner) Scan(ctx context.Context, repoID uint, root string, settings c
 		if _, ok := ignoreExts[strings.ToLower(filepath.Ext(path))]; ok {
 			return nil
 		}
+		if isOSJunk(d.Name()) {
+			return nil
+		}
 		if settings.MaxFileSize > 0 {
 			info, err := d.Info()
 			if err == nil && info.Size() > settings.MaxFileSize {
@@ -253,6 +256,19 @@ func toSet(items []string) map[string]struct{} {
 		out[strings.ToLower(it)] = struct{}{}
 	}
 	return out
+}
+
+// isOSJunk reports whether name is metadata an operating system dropped into
+// a folder rather than project content, including macOS "._" resource forks.
+func isOSJunk(name string) bool {
+	if strings.HasPrefix(name, "._") {
+		return true
+	}
+	switch strings.ToLower(name) {
+	case ".ds_store", "thumbs.db", "ehthumbs.db", "desktop.ini":
+		return true
+	}
+	return false
 }
 
 // folderIgnored reports whether any path segment is ignored.
