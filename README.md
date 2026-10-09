@@ -76,22 +76,23 @@ click through instead of a wall of terminal output.
 A scan runs as a background job through ordered stages, each reporting
 progress over the WebSocket hub as it goes:
 
-1. **git metadata**: branches, tags, HEAD, remote, top-level commit stats
-2. **file scan**: walk the tree, apply ignore rules + size limits, count
-   LOC/language per file with a worker pool
-3. **git history**: commits, authors, contributor rollups, streaks, heatmap,
-   file ownership
-4. **dependencies**: parse manifests per language
+1. **git metadata**: branches, tags, HEAD, remote
+2. **file scan**: walk the tree, apply ignore rules and size limits, count
+   lines per language, and measure complexity, function length and nesting
+   per file with a worker pool
+3. **git history**: commits on branches, tags and remotes, authors and their
+   time zones, contributor rollups and per-file ownership
+4. **dependencies**: parse manifests per ecosystem
 5. **import graph**: resolve imports, detect cycles (Tarjan SCC), flag
-   unused modules and dead files
-6. **metrics**: cyclomatic complexity, function length, nesting, largest /
-   most complex files
-7. **duplicates**: shingle-hash normalized lines, cluster similar blocks
-8. **content index**: populate SQLite FTS5 for instant search
+   unused folders and possibly dead files
+6. **duplicates**: shingle-hash normalized lines, cluster similar blocks
+7. **content index**: populate SQLite FTS5 for instant search
 
-Jobs are queued, run through a configurable worker pool, and persist their
-state: pause, resume, and cancel all just mutate that state, and a crash
-mid-scan resumes cleanly instead of leaving a half-written repository behind.
+Heatmaps, streaks and metric rollups are computed from the stored results
+when a page asks for them. Jobs are queued, run through a worker pool, and
+persist their state: pause, resume, and cancel are state changes, a
+repository never runs two scans at once, and a scan interrupted by a crash
+is re-queued and starts over on the next launch.
 
 ## Requirements
 
