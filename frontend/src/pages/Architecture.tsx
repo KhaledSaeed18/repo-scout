@@ -10,7 +10,7 @@ import 'reactflow/dist/style.css'
 import { Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useArchitecture, useRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 
 const nodeWidth = 170
 const nodeHeight = 36
@@ -78,7 +78,7 @@ function layout(edges: { from: string; to: string }[]): {
   return { nodes, edges: flowEdges }
 }
 
-function ArchitecturePage() {
+export default function Architecture() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const { data, isLoading } = useArchitecture(repoId)
@@ -192,13 +192,5 @@ function ArchitecturePage() {
         </>
       )}
     </div>
-  )
-}
-
-export default function Architecture() {
-  return (
-    <RepoProvider>
-      <ArchitecturePage />
-    </RepoProvider>
   )
 }

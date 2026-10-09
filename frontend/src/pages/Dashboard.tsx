@@ -28,7 +28,7 @@ import {
 } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useDeleteRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 import type { Repository } from '../lib/types'
 function formatBytes(n: number) {
   if (n > 1 << 30) return `${(n / (1 << 30)).toFixed(1)} GiB`
@@ -153,12 +153,12 @@ function RepoCard({ repo }: { repo: Repository }) {
   )
 }
 
-function DashboardInner() {
-  const { repos, repoId } = useRepoContext()
-  if (!repos) return <Spinner />
-  const repo = repos.repositories.find((r) => r.id === repoId)
+export default function Dashboard() {
+  const { repos, repoId, isLoading } = useRepoContext()
+  if (isLoading) return <Spinner />
+  const repo = repos.find((r) => r.id === repoId)
 
-  if (repos.repositories.length === 0) {
+  if (repos.length === 0) {
     return (
       <EmptyState
         icon={FolderGit2}
@@ -216,7 +216,7 @@ function DashboardInner() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {repos.repositories.map((r) => (
+              {repos.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>
                     <Link to={`/files?repo=${r.id}`} className="text-primary">
@@ -239,13 +239,5 @@ function DashboardInner() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function Dashboard() {
-  return (
-    <RepoProvider>
-      <DashboardInner />
-    </RepoProvider>
   )
 }

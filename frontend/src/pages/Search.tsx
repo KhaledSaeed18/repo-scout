@@ -16,7 +16,7 @@ import {
 } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { api, useRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 import type { SearchResult } from '../lib/types'
 
 const modes = [
@@ -27,7 +27,7 @@ const modes = [
   { id: 'extension', label: 'Extension' },
 ]
 
-function SearchPage() {
+export default function Search() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const [query, setQuery] = useState('')
@@ -130,13 +130,5 @@ function SearchPage() {
           </Card>
         ))}
     </div>
-  )
-}
-
-export default function Search() {
-  return (
-    <RepoProvider>
-      <SearchPage />
-    </RepoProvider>
   )
 }

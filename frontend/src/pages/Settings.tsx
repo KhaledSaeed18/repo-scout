@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, CardContent, Input, Spinner } from '@/components/ui'
 import { useSaveSettings, useSettings } from '../lib/api'
-import { RepoProvider } from '../lib/repoctx'
 import type { Settings as SettingsType } from '../lib/types'
 
-function SettingsPage() {
+export default function Settings() {
   const { data, isLoading } = useSettings()
   const save = useSaveSettings()
   const [form, setForm] = useState<SettingsType | null>(null)
@@ -107,13 +106,5 @@ function SettingsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function Settings() {
-  return (
-    <RepoProvider>
-      <SettingsPage />
-    </RepoProvider>
   )
 }

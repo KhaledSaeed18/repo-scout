@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useLiveUpdates } from './lib/ws'
 import { cn } from '@/lib/utils'
+import RepoProvider from './components/RepoProvider'
 import ThemeSync from './components/ThemeSync'
 
 const nav = [
@@ -19,6 +20,7 @@ const nav = [
 export default function App() {
   useLiveUpdates()
   return (
+    <RepoProvider>
     <div className="flex h-full">
       <ThemeSync />
       <aside className="flex w-52 flex-col gap-1 border-r border-sidebar-border bg-sidebar p-3">
@@ -46,5 +48,6 @@ export default function App() {
         <Outlet />
       </main>
     </div>
+    </RepoProvider>
   )
 }

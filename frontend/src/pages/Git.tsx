@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import { useCommits, useContributors, useHeatmap, useLargestCommits, useOwnership, useRepo, useBranches, useTags } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 import RepoSelector from '../components/RepoSelector'
 
 function HeatmapGrid({ heatmap }: { heatmap: import('../lib/types').Heatmap }) {
@@ -419,7 +419,7 @@ function ContributorsTab({ repoId }: { repoId: number }) {
   )
 }
 
-function GitInner() {
+export default function Git() {
   const { repoId } = useRepoContext()
   const [tab, setTab] = useState<'activity' | 'commits' | 'contributors' | 'largest' | 'ownership' | 'branches-tags'>('activity')
   const repo = useRepo(repoId).data
@@ -447,13 +447,5 @@ function GitInner() {
         <TabsContent value="branches-tags"><BranchesTagsView repoId={repoId} /></TabsContent>
       </Tabs>
     </div>
-  )
-}
-
-export default function Git() {
-  return (
-    <RepoProvider>
-      <GitInner />
-    </RepoProvider>
   )
 }

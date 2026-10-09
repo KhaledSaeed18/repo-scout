@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Stat, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useMetrics, useRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 
 const colors = [
   'var(--chart-1)',
@@ -21,7 +21,7 @@ const colors = [
   'var(--chart-5)',
 ]
 
-function MetricsPage() {
+export default function Metrics() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const { data, isLoading } = useMetrics(repoId)
@@ -183,13 +183,5 @@ function MetricsPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function Metrics() {
-  return (
-    <RepoProvider>
-      <MetricsPage />
-    </RepoProvider>
   )
 }

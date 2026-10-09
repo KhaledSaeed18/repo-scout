@@ -2,7 +2,7 @@ import { FolderGit2, PackageX } from 'lucide-react'
 import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useDependencies, useRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 
 const chartBadgeClasses = [
   'bg-chart-1/10 text-chart-1 dark:bg-chart-1/20',
@@ -25,7 +25,7 @@ function managerColor(manager: string) {
   return chartBadgeClasses[managerChartIndex[manager] ?? 4]
 }
 
-function DependenciesPage() {
+export default function Dependencies() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const { data, isLoading } = useDependencies(repoId)
@@ -78,13 +78,5 @@ function DependenciesPage() {
         </Card>
       ))}
     </div>
-  )
-}
-
-export default function Dependencies() {
-  return (
-    <RepoProvider>
-      <DependenciesPage />
-    </RepoProvider>
   )
 }

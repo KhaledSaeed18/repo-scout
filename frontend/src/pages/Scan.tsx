@@ -20,7 +20,6 @@ import {
 } from '@/components/ui'
 import FolderPicker from '../components/FolderPicker'
 import { api, useCreateRepo, useJobs } from '../lib/api'
-import { RepoProvider } from '../lib/repoctx'
 import type { Job } from '../lib/types'
 
 const jobActions = ['pause', 'resume', 'cancel'] as const
@@ -89,7 +88,7 @@ function JobRow({ job }: { job: Job }) {
   )
 }
 
-function ScanPage() {
+export default function Scan() {
   const [path, setPath] = useState('')
   const create = useCreateRepo()
   const { data, isLoading } = useJobs(1500)
@@ -162,13 +161,5 @@ function ScanPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function Scan() {
-  return (
-    <RepoProvider>
-      <ScanPage />
-    </RepoProvider>
   )
 }

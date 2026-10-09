@@ -20,7 +20,7 @@ import {
 } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useFiles, useRepo, useTree } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 
 const chartBadgeClasses = [
   'bg-chart-1/10 text-chart-1 dark:bg-chart-1/20',
@@ -183,7 +183,7 @@ function TreeView({ repoId }: { repoId: number }) {
   )
 }
 
-function FilesPage() {
+export default function Files() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const [view, setView] = useState<'tree' | 'table'>('tree')
@@ -212,13 +212,5 @@ function FilesPage() {
         </CardContent>
       </Card>
     </div>
-  )
-}
-
-export default function Files() {
-  return (
-    <RepoProvider>
-      <FilesPage />
-    </RepoProvider>
   )
 }

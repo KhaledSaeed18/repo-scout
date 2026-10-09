@@ -2,9 +2,9 @@ import { Copy, FolderGit2 } from 'lucide-react'
 import { Badge, Card, CardContent, EmptyState, Spinner, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import RepoSelector from '../components/RepoSelector'
 import { useDuplicates, useRepo } from '../lib/api'
-import { RepoProvider, useRepoContext } from '../lib/repoctx'
+import { useRepoContext } from '@/lib/repo-context'
 
-function DuplicatesPage() {
+export default function Duplicates() {
   const { repoId } = useRepoContext()
   const repo = useRepo(repoId).data
   const { data, isLoading } = useDuplicates(repoId)
@@ -54,13 +54,5 @@ function DuplicatesPage() {
         </Card>
       ))}
     </div>
-  )
-}
-
-export default function Duplicates() {
-  return (
-    <RepoProvider>
-      <DuplicatesPage />
-    </RepoProvider>
   )
 }
