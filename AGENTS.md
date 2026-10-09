@@ -72,6 +72,10 @@ The UI follows a "survey map" system. Keep new work inside it:
 
 ## Git rules
 
+These rules are for the maintainer and agents working in this repository.
+Outside contributors work in forks and open pull requests, as described in
+`CONTRIBUTING.md`; keep that guide in sync when conventions here change.
+
 - Micro-commits: one small self-contained unit per commit, committed
   immediately. Never batch unrelated changes.
 - Conventional commits: `type(scope): summary`, imperative, lower case, no
