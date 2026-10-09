@@ -1,4 +1,5 @@
 import {
+  CalendarDays,
   Copy,
   FolderGit2,
   FolderTree,
@@ -25,7 +26,13 @@ interface NavItem {
 /** Pages grouped by the part of the repository they inspect. */
 const groups: { label?: string; items: NavItem[] }[] = [
   { items: [{ to: '/', label: 'Overview', icon: MapIcon }] },
-  { label: 'History', items: [{ to: '/git', label: 'Git history', icon: GitCommitHorizontal }] },
+  {
+    label: 'History',
+    items: [
+      { to: '/activity', label: 'Activity', icon: CalendarDays },
+      { to: '/git', label: 'Git history', icon: GitCommitHorizontal },
+    ],
+  },
   {
     label: 'Code',
     items: [

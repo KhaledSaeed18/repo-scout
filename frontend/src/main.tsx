@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
 import Overview from './pages/Overview'
+import Activity from './pages/history/Activity'
 import Repositories from './pages/Repositories'
 import Git from './pages/Git'
 import Files from './pages/Files'
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/" element={<Overview />} />
               <Route path="/repositories" element={<Repositories />} />
               <Route path="/scan" element={<Navigate to="/repositories" replace />} />
+              <Route path="/activity" element={<Activity />} />
               <Route path="/git" element={<Git />} />
               <Route path="/files" element={<Files />} />
               <Route path="/search" element={<Search />} />
