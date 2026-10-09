@@ -1,13 +1,10 @@
 // shadcn/ui components
-export * from './alert'
 export * from './badge'
 export * from './button'
-export * from './card'
 export * from './dialog'
 export * from './input'
 export * from './label'
 export * from './progress'
-export * from './scroll-area'
 export {
   Select,
   SelectContent,
@@ -33,9 +30,7 @@ export {
 export * from './tabs'
 
 // Custom components
-export * from './empty'
 export * from './spinner'
-export * from './stat'
 
 // Utilities
 export { cn } from '../../lib/utils'
