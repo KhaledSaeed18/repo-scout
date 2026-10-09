@@ -6,11 +6,13 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 
@@ -309,33 +311,34 @@ func ftsQuery(text string) string {
 	return strings.Join(parts, " AND ")
 }
 
+// ErrInvalidPattern reports a search pattern that does not compile.
+var ErrInvalidPattern = errors.New("invalid pattern")
+
 // buildMatcher compiles the exact-match regex used to verify content hits.
 func buildMatcher(q Query) (*regexp.Regexp, error) {
-	var pattern string
-	if q.Mode == ModeRegex {
-		pattern = q.Text
-		if q.WholeWord {
-			pattern = `\b` + pattern + `\b`
-		}
-	} else {
+	pattern := q.Text
+	if q.Mode != ModeRegex {
 		pattern = regexp.QuoteMeta(q.Text)
-		if q.WholeWord {
-			pattern = `\b` + pattern + `\b`
-		}
+	}
+	if q.WholeWord {
+		// Group so alternations like "a|b" stay inside the word boundaries.
+		pattern = `\b(?:` + pattern + `)\b`
 	}
 	if !q.CaseSensitive {
 		pattern = `(?i)` + pattern
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("invalid pattern: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidPattern, err)
 	}
 	return re, nil
 }
 
+// snippet trims a matched line to 240 characters without splitting a rune.
 func snippet(line string) string {
-	if len(line) > 240 {
-		return line[:240]
+	const limit = 240
+	if utf8.RuneCountInString(line) <= limit {
+		return line
 	}
-	return line
+	return string([]rune(line)[:limit])
 }

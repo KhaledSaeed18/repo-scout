@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -26,6 +27,10 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		Offset:        queryInt(r, "offset", 0, 0),
 	}
 	result, err := search.New(s.db).Search(r.Context(), query, s.currentSettings())
+	if errors.Is(err, search.ErrInvalidPattern) {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "search: "+err.Error())
 		return

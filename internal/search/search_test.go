@@ -2,9 +2,12 @@ package search
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 
@@ -143,5 +146,36 @@ func TestSearch(t *testing.T) {
 	}
 	if len(res.Hits) != 1 || res.Hits[0].Path != "cmd/main.go" {
 		t.Fatalf("whole-word content search: %+v", res.Hits)
+	}
+}
+
+func TestBuildMatcherGroupsWholeWordAlternation(t *testing.T) {
+	re, err := buildMatcher(Query{Mode: ModeRegex, Text: "foo|bar", WholeWord: true, CaseSensitive: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if re.MatchString("foobar") {
+		t.Fatalf("whole-word alternation must not match inside a word: %s", re)
+	}
+	if !re.MatchString("a bar b") || !re.MatchString("foo.") {
+		t.Fatalf("expected whole-word matches: %s", re)
+	}
+}
+
+func TestBuildMatcherInvalidPattern(t *testing.T) {
+	_, err := buildMatcher(Query{Mode: ModeRegex, Text: "(unclosed"})
+	if !errors.Is(err, ErrInvalidPattern) {
+		t.Fatalf("expected ErrInvalidPattern, got %v", err)
+	}
+}
+
+func TestSnippetKeepsRunesWhole(t *testing.T) {
+	line := strings.Repeat("é", 300)
+	got := snippet(line)
+	if !utf8.ValidString(got) {
+		t.Fatal("snippet cut a multi-byte character in half")
+	}
+	if utf8.RuneCountInString(got) != 240 {
+		t.Fatalf("expected 240 characters, got %d", utf8.RuneCountInString(got))
 	}
 }

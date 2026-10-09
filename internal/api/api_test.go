@@ -365,3 +365,14 @@ func TestFilesFilterByPath(t *testing.T) {
 		t.Fatalf("expected exactly util/util.go, got %v", body)
 	}
 }
+
+func TestSearchInvalidRegexIsBadRequest(t *testing.T) {
+	ts, _ := newTestServer(t)
+	resp, body := get(t, ts, "/api/search?repo=1&mode=regex&query=%28unclosed")
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for an invalid pattern, got %d %v", resp.StatusCode, body)
+	}
+	if msg, _ := body["error"].(string); !strings.Contains(msg, "invalid pattern") {
+		t.Fatalf("expected a useful message, got %q", msg)
+	}
+}
