@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   Architecture,
   Branch,
@@ -119,6 +119,7 @@ export const useFiles = (id: number, params: Record<string, string | number>) =>
     queryKey: ['files', id, params],
     queryFn: () => api.files(id, params),
     enabled: id > 0,
+    placeholderData: keepPreviousData,
   })
 
 export const useTree = (id: number, folder: string) =>
