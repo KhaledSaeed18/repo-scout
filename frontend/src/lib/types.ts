@@ -285,10 +285,12 @@ export interface Tag {
 export interface BrowseEntry {
   name: string
   path: string
+  isRepo: boolean
 }
 
 export interface BrowseResponse {
   path: string
   parent: string
+  isRepo: boolean
   entries: BrowseEntry[]
 }

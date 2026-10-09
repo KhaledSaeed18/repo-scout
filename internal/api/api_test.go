@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -374,5 +375,35 @@ func TestSearchInvalidRegexIsBadRequest(t *testing.T) {
 	}
 	if msg, _ := body["error"].(string); !strings.Contains(msg, "invalid pattern") {
 		t.Fatalf("expected a useful message, got %q", msg)
+	}
+}
+
+func TestBrowseFlagsGitRepositories(t *testing.T) {
+	ts, _ := newTestServer(t)
+	root := t.TempDir()
+	for _, dir := range []string{"plain", "project/.git", ".hidden"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resp, body := get(t, ts, "/api/browse?path="+url.QueryEscape(root))
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("browse: %d %v", resp.StatusCode, body)
+	}
+	if body["isRepo"] != false {
+		t.Fatalf("root is not a repository: %v", body["isRepo"])
+	}
+	got := map[string]bool{}
+	for _, e := range body["entries"].([]any) {
+		m := e.(map[string]any)
+		got[m["name"].(string)] = m["isRepo"].(bool)
+	}
+	if len(got) != 2 || got["plain"] || !got["project"] {
+		t.Fatalf("expected plain=false project=true and no hidden folders, got %v", got)
+	}
+
+	_, body = get(t, ts, "/api/browse?path="+url.QueryEscape(filepath.Join(root, "project")))
+	if body["isRepo"] != true {
+		t.Fatalf("expected the project folder to be flagged as a repository")
 	}
 }
