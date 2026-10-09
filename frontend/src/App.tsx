@@ -14,6 +14,12 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
   useEffect(() => setMenuOpen(false), [pathname])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
 
   return (
     <RepoProvider>
@@ -30,7 +36,7 @@ export default function App() {
               className="absolute inset-0 bg-foreground/30"
               onClick={() => setMenuOpen(false)}
             />
-            <aside className="relative h-full w-64 border-r border-sidebar-border bg-sidebar">
+            <aside aria-label="Menu" className="relative h-full w-64 border-r border-sidebar-border bg-sidebar">
               <Sidebar onNavigate={() => setMenuOpen(false)} />
             </aside>
           </div>
