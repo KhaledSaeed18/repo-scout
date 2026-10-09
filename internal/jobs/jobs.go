@@ -136,12 +136,22 @@ func (m *Manager) recover() error {
 
 // Enqueue creates a queued job and wakes a worker.
 func (m *Manager) Enqueue(repoID uint, kind string) (*models.Job, error) {
-	job := models.Job{
-		RepoID: repoID,
-		Kind:   kind,
-		Status: models.JobQueued,
-	}
-	if err := m.db.Create(&job).Error; err != nil {
+	// A repository has at most one live job of a kind; asking again returns
+	// it, so two scans never clear and rewrite the same data concurrently.
+	var job models.Job
+	err := m.db.Transaction(func(tx *gorm.DB) error {
+		live := []string{models.JobQueued, models.JobRunning, models.JobPaused, models.JobCancelling}
+		err := tx.Where("repo_id = ? AND kind = ? AND status IN ?", repoID, kind, live).Order("id DESC").First(&job).Error
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		job = models.Job{RepoID: repoID, Kind: kind, Status: models.JobQueued}
+		return tx.Create(&job).Error
+	})
+	if err != nil {
 		return nil, fmt.Errorf("enqueue job: %w", err)
 	}
 	m.broadcast(&job)

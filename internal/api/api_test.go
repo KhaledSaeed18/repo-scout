@@ -407,3 +407,30 @@ func TestBrowseFlagsGitRepositories(t *testing.T) {
 		t.Fatalf("expected the project folder to be flagged as a repository")
 	}
 }
+
+func TestScanRequestReusesActiveJob(t *testing.T) {
+	ts, srv := newTestServer(t)
+	var repo models.Repository
+	srv.db.First(&repo)
+	active := models.Job{RepoID: repo.ID, Kind: "scan", Status: models.JobQueued}
+	srv.db.Create(&active)
+
+	body := strings.NewReader(`{"path":"` + repo.Path + `"}`)
+	resp, err := http.Post(ts.URL+"/api/repositories", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var out struct {
+		Job models.Job `json:"job"`
+	}
+	_ = json.NewDecoder(resp.Body).Decode(&out)
+	if out.Job.ID != active.ID {
+		t.Fatalf("expected the queued job %d to be reused, got job %d", active.ID, out.Job.ID)
+	}
+	var n int64
+	srv.db.Model(&models.Job{}).Where("repo_id = ?", repo.ID).Count(&n)
+	if n != 1 {
+		t.Fatalf("a second scan was queued for the same repository (%d jobs)", n)
+	}
+}
