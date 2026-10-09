@@ -18,7 +18,7 @@ function Group({ group, index }: { group: DuplicateGroup; index: number }) {
       description={`Up to ${plural(longest, 'line')} repeated in ${plural(group.fileCount, 'file')}.`}
       actions={<Badge variant="outline">{Math.round(group.similarity * 100)}% similar</Badge>}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
         <figure className="min-w-0">
           <figcaption className="mb-1.5 text-xs text-muted-foreground">Sample of the repeated code, normalized for comparison</figcaption>
           <pre className="max-h-64 overflow-auto rounded-sm border bg-card p-3 font-mono text-xs leading-5">

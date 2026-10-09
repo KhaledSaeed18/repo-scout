@@ -40,7 +40,7 @@ function Header({ repo }: { repo: Repository }) {
     <>
       <PageHeader
         title={repo.name}
-        description={<span className="font-mono text-sm">{repo.path}</span>}
+        description={<span className="font-mono text-sm break-all">{repo.path}</span>}
         actions={
           <Button
             variant="outline"
@@ -199,7 +199,7 @@ export default function Overview() {
           <Header repo={repo} />
           <Languages repoId={repo.id} />
           <Activity repoId={repo.id} />
-          <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2 [&>section]:mt-0">
+          <div className="mt-10 grid grid-cols-1 gap-x-10 gap-y-10 lg:grid-cols-2 [&>section]:mt-0">
             <Hotspots repoId={repo.id} />
             <Contributors repoId={repo.id} />
           </div>

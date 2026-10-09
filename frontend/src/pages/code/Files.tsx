@@ -43,7 +43,7 @@ function FilesPage({ repo }: { repo: Repository }) {
           <TabsTrigger value="table">All files</TabsTrigger>
         </TabsList>
         <TabsContent value="tree">
-          <div className="grid gap-8 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
             <div className="max-h-[70vh] overflow-y-auto rounded-md border bg-card p-1.5">
               <FileTree key={repo.id} repoId={repo.id} selected={selected} onSelect={select} />
             </div>

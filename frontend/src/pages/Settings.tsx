@@ -13,7 +13,7 @@ const mb = 1024 * 1024
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: ReactNode; children: ReactNode }) {
   return (
-    <div className="grid gap-x-10 gap-y-2 border-b border-border/60 py-4 last:border-b-0 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-x-10 gap-y-2 border-b border-border/60 py-4 last:border-b-0 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
       <div>
         <label htmlFor={id} className="font-medium">
           {label}

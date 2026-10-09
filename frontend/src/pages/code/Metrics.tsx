@@ -139,7 +139,7 @@ function MetricsPage({ repo }: { repo: Repository }) {
           <>
             <Totals m={m} />
             <Languages m={m} />
-            <div className="mt-10 grid gap-10 lg:grid-cols-2 [&>section]:mt-0">
+            <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 [&>section]:mt-0">
               <Ranked title="Largest files" description="By lines of code." files={m.largestFiles} value={(f) => f.linesCode} unit="lines" />
               <Ranked
                 title="Most complex files"

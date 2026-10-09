@@ -55,7 +55,7 @@ function ViewPicker({ view, setView, fileCount }: { view: View; setView: (v: Vie
     { label: 'Files', view: { kind: 'files' } },
   ]
   return (
-    <div role="radiogroup" aria-label="Graph detail" className="flex rounded-md border bg-card p-0.5">
+    <div role="radiogroup" aria-label="Graph detail" className="flex flex-wrap rounded-md border bg-card p-0.5">
       {options.map((o) => {
         const active = o.view.kind === view.kind && (o.view.kind === 'files' || (view.kind === 'folders' && o.view.depth === view.depth))
         const disabled = o.view.kind === 'files' && fileCount > fileViewLimit
@@ -97,7 +97,7 @@ function Report({ repo, data }: { repo: Repository; data: Architecture }) {
       <Section title="Import graph" actions={<ViewPicker view={view} setView={setView} fileCount={fileCount} />}>
         <ImportGraph key={`${repo.id}-${view.kind}-${view.kind === 'folders' ? view.depth : 0}`} edges={data.edges} folders={folders} depth={view.kind === 'folders' ? view.depth : undefined} />
       </Section>
-      <div className="mt-10 grid gap-10 lg:grid-cols-2">
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2">
         <Finding
           title="Circular dependencies"
           description="Folders that import each other in a loop. Cycles make code harder to change in isolation."
@@ -105,7 +105,7 @@ function Report({ repo, data }: { repo: Repository; data: Architecture }) {
         >
           <ol className="flex flex-col gap-3">
             {data.cycles.map((c) => (
-              <li key={c.join()} className="rounded-sm border bg-card p-3 font-mono text-[0.8125rem]">
+              <li key={c.join()} className="rounded-sm border bg-card p-3 font-mono text-[0.8125rem] break-all">
                 {[...c, c[0]].join(' → ')}
               </li>
             ))}
