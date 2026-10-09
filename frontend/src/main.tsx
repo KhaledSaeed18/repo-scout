@@ -1,23 +1,26 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import App from './App.tsx'
-import Overview from './pages/Overview'
-import Activity from './pages/history/Activity'
-import Commits from './pages/history/Commits'
-import Contributors from './pages/history/Contributors'
-import Refs from './pages/history/Refs'
-import Repositories from './pages/Repositories'
-import Files from './pages/code/Files'
-import Search from './pages/code/Search'
-import Duplicates from './pages/code/Duplicates'
-import Architecture from './pages/structure/Architecture'
-import Metrics from './pages/code/Metrics'
-import Dependencies from './pages/structure/Dependencies'
-import Settings from './pages/Settings'
+
+// Pages load on demand so the first paint does not wait for charts and graphs.
+const Overview = lazy(() => import('./pages/Overview'))
+const Repositories = lazy(() => import('./pages/Repositories'))
+const Activity = lazy(() => import('./pages/history/Activity'))
+const Commits = lazy(() => import('./pages/history/Commits'))
+const Contributors = lazy(() => import('./pages/history/Contributors'))
+const Refs = lazy(() => import('./pages/history/Refs'))
+const Files = lazy(() => import('./pages/code/Files'))
+const Search = lazy(() => import('./pages/code/Search'))
+const Metrics = lazy(() => import('./pages/code/Metrics'))
+const Duplicates = lazy(() => import('./pages/code/Duplicates'))
+const Architecture = lazy(() => import('./pages/structure/Architecture'))
+const Dependencies = lazy(() => import('./pages/structure/Dependencies'))
+const Settings = lazy(() => import('./pages/Settings'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,19 +41,21 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<App />}>
               <Route path="/" element={<Overview />} />
               <Route path="/repositories" element={<Repositories />} />
-              <Route path="/scan" element={<Navigate to="/repositories" replace />} />
               <Route path="/activity" element={<Activity />} />
               <Route path="/commits" element={<Commits />} />
               <Route path="/contributors" element={<Contributors />} />
               <Route path="/branches" element={<Refs />} />
-              <Route path="/git" element={<Navigate to="/activity" replace />} />
               <Route path="/files" element={<Files />} />
               <Route path="/search" element={<Search />} />
+              <Route path="/metrics" element={<Metrics />} />
               <Route path="/duplicates" element={<Duplicates />} />
               <Route path="/architecture" element={<Architecture />} />
-              <Route path="/metrics" element={<Metrics />} />
               <Route path="/dependencies" element={<Dependencies />} />
               <Route path="/settings" element={<Settings />} />
+              {/* Old addresses from before the redesign. */}
+              <Route path="/scan" element={<Navigate to="/repositories" replace />} />
+              <Route path="/git" element={<Navigate to="/activity" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </BrowserRouter>

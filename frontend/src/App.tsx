@@ -1,10 +1,12 @@
 import { Menu, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
+import ErrorBoundary from './components/ErrorBoundary'
 import RepoProvider from './components/RepoProvider'
 import Sidebar from './components/Sidebar'
 import ThemeSync from './components/ThemeSync'
+import { Loading } from './components/states'
 import { useLiveUpdates } from './lib/ws'
 
 export default function App() {
@@ -43,7 +45,11 @@ export default function App() {
           </header>
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8">
-              <Outlet />
+              <ErrorBoundary resetKey={pathname}>
+                <Suspense fallback={<Loading label="Loading page…" />}>
+                  <Outlet />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </main>
         </div>

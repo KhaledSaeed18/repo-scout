@@ -1,46 +1,49 @@
+import { TriangleAlert } from 'lucide-react'
 import { Component, type ReactNode } from 'react'
+import { Button } from '@/components/ui'
 
 interface Props {
   children: ReactNode
-  fallback?: ReactNode
+  /** When this changes (for example the route), a caught error is cleared. */
+  resetKey?: string
 }
 
 interface State {
-  hasError: boolean
   error: Error | null
+  resetKey?: string
 }
 
+/** Contains a render crash so the rest of the app keeps working. */
 export default class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props)
-    this.state = { hasError: false, error: null }
+  state: State = { error: null, resetKey: this.props.resetKey }
+
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { error }
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    return props.resetKey !== state.resetKey ? { error: null, resetKey: props.resetKey } : null
   }
 
   render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback
-      }
-      return (
-        <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <h2 className="text-lg font-semibold text-destructive">Something went wrong</h2>
-          <p className="text-sm text-muted-foreground">
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-          >
-            Try again
-          </button>
+    const { error } = this.state
+    if (!error) return this.props.children
+    return (
+      <div role="alert" className="mx-auto flex max-w-lg flex-col items-start gap-3 px-6 py-16">
+        <TriangleAlert className="size-6 text-destructive" aria-hidden />
+        <h1 className="text-xl font-semibold">This view stopped working</h1>
+        <p className="text-sm text-muted-foreground">
+          Something in the page failed while rendering. Your scan data is safe. Try again, or reload the app if it keeps
+          happening.
+        </p>
+        <pre className="max-w-full overflow-x-auto rounded-sm border bg-card px-3 py-2 font-mono text-xs">{error.message}</pre>
+        <div className="flex gap-2">
+          <Button onClick={() => this.setState({ error: null })}>Try again</Button>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Reload app
+          </Button>
         </div>
-      )
-    }
-
-    return this.props.children
+      </div>
+    )
   }
 }
