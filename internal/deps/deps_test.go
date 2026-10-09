@@ -49,3 +49,25 @@ func TestParseEntryFields(t *testing.T) {
 		t.Fatalf("unexpected entries: %+v", entries)
 	}
 }
+
+func TestParseGoModMarksIndirect(t *testing.T) {
+	content := "module x\n\nrequire (\n\tgithub.com/direct/a v1.0.0\n\tgithub.com/transitive/b v0.2.0 // indirect\n)\n\nrequire github.com/transitive/c v1.1.0 // indirect\n"
+	_, entries, err := Parse("go.mod", content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scopes := map[string]string{}
+	for _, e := range entries {
+		scopes[e.Name] = e.Scope
+	}
+	want := map[string]string{
+		"github.com/direct/a":     "production",
+		"github.com/transitive/b": "indirect",
+		"github.com/transitive/c": "indirect",
+	}
+	for name, scope := range want {
+		if scopes[name] != scope {
+			t.Errorf("%s: scope %q, want %q", name, scopes[name], scope)
+		}
+	}
+}

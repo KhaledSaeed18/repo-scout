@@ -97,8 +97,9 @@ func parseJSONDeps(content string, prodKeys ...string) ([]Entry, error) {
 func parseGoMod(content string) ([]Entry, error) {
 	var out []Entry
 	inBlock := false
-	for _, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(strings.SplitN(line, "//", 2)[0])
+	for _, raw := range strings.Split(content, "\n") {
+		code, comment, _ := strings.Cut(raw, "//")
+		line := strings.TrimSpace(code)
 		if line == "" {
 			continue
 		}
@@ -117,7 +118,12 @@ func parseGoMod(content string) ([]Entry, error) {
 		}
 		fields := strings.Fields(line)
 		if len(fields) >= 2 && fields[0] != "" {
-			out = append(out, Entry{Name: fields[0], Version: fields[1], Scope: "production"})
+			// Go marks requirements that only exist for other modules.
+			scope := "production"
+			if strings.TrimSpace(comment) == "indirect" {
+				scope = "indirect"
+			}
+			out = append(out, Entry{Name: fields[0], Version: fields[1], Scope: scope})
 		}
 	}
 	return out, nil
