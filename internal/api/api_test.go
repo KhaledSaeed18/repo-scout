@@ -281,3 +281,34 @@ func TestTreeEscapesLikeWildcards(t *testing.T) {
 		t.Fatalf("expected only subfolder x, got %v", folders)
 	}
 }
+
+func TestDuplicatesGroupsBlocks(t *testing.T) {
+	ts, srv := newTestServer(t)
+	groups := []models.DuplicateGroup{{RepoID: 1, Lines: 12}, {RepoID: 1, Lines: 8}}
+	if err := srv.db.Create(&groups).Error; err != nil {
+		t.Fatal(err)
+	}
+	blocks := []models.DuplicateBlock{
+		{GroupID: groups[0].ID, RepoID: 1, FilePath: "b.go", StartLine: 1, EndLine: 12},
+		{GroupID: groups[0].ID, RepoID: 1, FilePath: "a.go", StartLine: 4, EndLine: 15},
+		{GroupID: groups[1].ID, RepoID: 1, FilePath: "c.go", StartLine: 2, EndLine: 9},
+	}
+	if err := srv.db.Create(&blocks).Error; err != nil {
+		t.Fatal(err)
+	}
+	resp, body := get(t, ts, "/api/repositories/1/duplicates")
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("duplicates: %d %v", resp.StatusCode, body)
+	}
+	out := body["groups"].([]any)
+	if len(out) != 2 {
+		t.Fatalf("expected 2 groups, got %d", len(out))
+	}
+	first := out[0].(map[string]any)["blocks"].([]any)
+	if len(first) != 2 || first[0].(map[string]any)["filePath"] != "a.go" {
+		t.Fatalf("expected largest group with blocks sorted by path, got %v", first)
+	}
+	if second := out[1].(map[string]any)["blocks"].([]any); len(second) != 1 {
+		t.Fatalf("expected 1 block in second group, got %v", second)
+	}
+}

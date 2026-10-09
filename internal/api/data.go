@@ -76,11 +76,22 @@ func (s *Server) handleDuplicates(w http.ResponseWriter, r *http.Request) {
 		models.DuplicateGroup
 		Blocks []models.DuplicateBlock `json:"blocks"`
 	}
+	var blocks []models.DuplicateBlock
+	if err := s.db.Where("repo_id = ?", id).Order("file_path ASC, start_line ASC").Find(&blocks).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "duplicate blocks: "+err.Error())
+		return
+	}
+	byGroup := make(map[uint][]models.DuplicateBlock, len(groups))
+	for _, b := range blocks {
+		byGroup[b.GroupID] = append(byGroup[b.GroupID], b)
+	}
 	out := make([]groupWithBlocks, 0, len(groups))
 	for _, g := range groups {
-		var blocks []models.DuplicateBlock
-		s.db.Where("group_id = ?", g.ID).Order("file_path ASC").Find(&blocks)
-		out = append(out, groupWithBlocks{DuplicateGroup: g, Blocks: blocks})
+		gb := byGroup[g.ID]
+		if gb == nil {
+			gb = []models.DuplicateBlock{}
+		}
+		out = append(out, groupWithBlocks{DuplicateGroup: g, Blocks: gb})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"groups": out, "total": len(out)})
 }
