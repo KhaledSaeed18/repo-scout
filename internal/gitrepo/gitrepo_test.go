@@ -261,3 +261,56 @@ func TestStreamLogsKeepsAuthorTimezone(t *testing.T) {
 		t.Fatalf("expected author-local 23:30 on Jan 1, got %v", local)
 	}
 }
+
+func TestSplitRename(t *testing.T) {
+	cases := []struct{ in, old, new string }{
+		{"a.go", "", "a.go"},
+		{"old.go => new.go", "old.go", "new.go"},
+		{"src/{a => b}/c.go", "src/a/c.go", "src/b/c.go"},
+		{"src/{ => sub}/c.go", "src/c.go", "src/sub/c.go"},
+		{"{lib => pkg}/x.go", "lib/x.go", "pkg/x.go"},
+		{"dir/{x.go => y.go}", "dir/x.go", "dir/y.go"},
+	}
+	for _, c := range cases {
+		old, nw := splitRename(c.in)
+		if old != c.old || nw != c.new {
+			t.Errorf("splitRename(%q) = %q, %q; want %q, %q", c.in, old, nw, c.old, c.new)
+		}
+	}
+}
+
+func TestAnalyzeHistoryFollowsRenames(t *testing.T) {
+	root := t.TempDir()
+	git(t, root, "init", "-q", "-b", "main", ".")
+	writeFile(t, root, "old/name.go", "package a\n\nfunc A() {}\n")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "add")
+	writeFile(t, root, "old/name.go", "package a\n\nfunc A() { println() }\n")
+	git(t, root, "commit", "-qam", "edit")
+	git(t, root, "mv", "old", "new")
+	git(t, root, "commit", "-qm", "move")
+	writeFile(t, root, "new/name.go", "package a\n\nfunc A() { println(1) }\n")
+	git(t, root, "commit", "-qam", "edit again")
+
+	var paths []string
+	_, files, err := New().AnalyzeHistoryWithCommits(context.Background(), root, func(_ models.Commit, fcs []FileChange) error {
+		for _, fc := range fcs {
+			paths = append(paths, fc.Path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("analyze: %v", err)
+	}
+	for _, p := range paths {
+		if p != "new/name.go" {
+			t.Fatalf("expected every change under the latest name, got %v", paths)
+		}
+	}
+	if fh := files["new/name.go"]; fh == nil || fh.Commits != 4 {
+		t.Fatalf("expected 4 commits on new/name.go, got %+v", fh)
+	}
+	if _, ok := files["old/name.go"]; ok {
+		t.Fatal("expected no history under the old name")
+	}
+}

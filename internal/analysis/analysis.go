@@ -200,10 +200,11 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 	if !git.Available() || !git.IsRepo(repo.Path) {
 		return nil
 	}
-	// Commits stream straight into the database in batches so memory stays
-	// bounded by the batch, not by the length of the history.
+	// Commits and the files they changed stream straight into the database
+	// in batches, so memory stays bounded by the batch, not by the history.
 	const batch = 500
 	commits := make([]models.Commit, 0, batch)
+	changes := make([][]gitrepo.FileChange, 0, batch)
 	flush := func() error {
 		if len(commits) == 0 {
 			return nil
@@ -211,18 +212,32 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 		if err := r.db.Create(&commits).Error; err != nil {
 			return fmt.Errorf("insert commits: %w", err)
 		}
-		commits = commits[:0]
+		var rows []models.CommitFile
+		for i, c := range commits {
+			for _, fc := range changes[i] {
+				rows = append(rows, models.CommitFile{
+					RepoID: repo.ID, CommitID: c.ID, Path: fc.Path, Additions: fc.Add, Deletions: fc.Del,
+				})
+			}
+		}
+		if len(rows) > 0 {
+			if err := r.db.CreateInBatches(&rows, batch).Error; err != nil {
+				return fmt.Errorf("insert commit files: %w", err)
+			}
+		}
+		commits, changes = commits[:0], changes[:0]
 		return nil
 	}
 	seen := 0
-	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, changes []gitrepo.FileChange) error {
+	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, fcs []gitrepo.FileChange) error {
 		c.RepoID = repo.ID
-		c.FilesChanged = len(changes)
-		for _, fc := range changes {
+		c.FilesChanged = len(fcs)
+		for _, fc := range fcs {
 			c.Insertions += fc.Add
 			c.Deletions += fc.Del
 		}
 		commits = append(commits, c)
+		changes = append(changes, fcs)
 		if len(commits) < batch {
 			return nil
 		}
@@ -255,29 +270,38 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 		}
 	}
 
-	// File ownership + per-file git attribution.
+	if err := r.fileOwnership(repo.ID); err != nil {
+		return err
+	}
 	if len(files) > 0 {
-		ownership := make([]models.FileOwnership, 0, len(files))
-		for path, fh := range files {
-			ownership = append(ownership, models.FileOwnership{
-				RepoID: repo.ID, Path: path, Author: fh.Author, Commits: fh.Commits,
-			})
-		}
-		for i := 0; i < len(ownership); i += 500 {
-			end := i + 500
-			if end > len(ownership) {
-				end = len(ownership)
-			}
-			if err := r.db.Create(ownership[i:end]).Error; err != nil {
-				return err
-			}
-		}
 		if err := r.applyFileGitInfo(repo.ID, files); err != nil {
 			return err
 		}
 	}
 	rep.SetMessage("git history analyzed")
 	return rep.Checkpoint(ctx)
+}
+
+// fileOwnership stores, for every scanned file with history, the author who
+// made the most of its commits and their share. It runs in SQL so it stays
+// flat in memory however long the history is.
+func (r *Runner) fileOwnership(repoID uint) error {
+	err := r.db.Exec(`INSERT INTO file_ownerships (repo_id, path, author, email, commits, share)
+		SELECT repo_id, path, author, email, commits, share FROM (
+			SELECT cf.repo_id, cf.path, MAX(c.author) AS author, c.email,
+				COUNT(*) AS commits,
+				COUNT(*) * 1.0 / SUM(COUNT(*)) OVER (PARTITION BY cf.path) AS share,
+				ROW_NUMBER() OVER (PARTITION BY cf.path ORDER BY COUNT(*) DESC, MAX(c.date) DESC) AS rank
+			FROM commit_files cf
+			JOIN commits c ON c.id = cf.commit_id
+			JOIN files f ON f.repo_id = cf.repo_id AND f.path = cf.path
+			WHERE cf.repo_id = ?
+			GROUP BY cf.path, CASE WHEN c.email = '' THEN c.author ELSE c.email END
+		) WHERE rank = 1`, repoID).Error
+	if err != nil {
+		return fmt.Errorf("file ownership: %w", err)
+	}
+	return nil
 }
 
 // applyFileGitInfo copies git attribution onto the scanned file rows.

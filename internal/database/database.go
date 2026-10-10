@@ -76,6 +76,7 @@ func Migrate(db *gorm.DB) error {
 		&models.Repository{},
 		&models.File{},
 		&models.Commit{},
+		&models.CommitFile{},
 		&models.Branch{},
 		&models.Tag{},
 		&models.Contributor{},
@@ -125,6 +126,7 @@ func repoTables() []any {
 	return []any{
 		&models.File{},
 		&models.Commit{},
+		&models.CommitFile{},
 		&models.Branch{},
 		&models.Tag{},
 		&models.Contributor{},

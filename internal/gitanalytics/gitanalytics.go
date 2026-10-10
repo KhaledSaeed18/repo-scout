@@ -3,6 +3,7 @@
 package gitanalytics
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -46,6 +47,7 @@ type StreaksResult struct {
 // OwnerSummary aggregates file ownership per author.
 type OwnerSummary struct {
 	Author string  `json:"author"`
+	Email  string  `json:"email"`
 	Files  int     `json:"files"`
 	Share  float64 `json:"share"`
 }
@@ -187,27 +189,24 @@ func streaksFromDates(email string, dates []time.Time, now time.Time) StreaksRes
 	return res
 }
 
-// Ownership aggregates primary-authorship across files.
+// ComputeOwnership counts, per author, the files where they made the most
+// commits.
 func ComputeOwnership(db *gorm.DB, repoID uint) (Ownership, error) {
-	var files []models.File
-	err := db.Select("author", "path").Where("repo_id = ? AND author != ''", repoID).Find(&files).Error
+	var rows []OwnerSummary
+	err := db.Raw(`SELECT MAX(author) AS author, email, COUNT(*) AS files
+		FROM file_ownerships WHERE repo_id = ?
+		GROUP BY CASE WHEN email = '' THEN author ELSE email END
+		ORDER BY files DESC, author ASC`, repoID).Scan(&rows).Error
 	if err != nil {
-		return Ownership{}, err
+		return Ownership{}, fmt.Errorf("ownership: %w", err)
 	}
-	o := Ownership{Total: len(files)}
-	counts := map[string]int{}
-	for _, f := range files {
-		counts[f.Author]++
+	o := Ownership{ByAuthor: rows}
+	for _, r := range rows {
+		o.Total += r.Files
 	}
-	for a, n := range counts {
-		o.ByAuthor = append(o.ByAuthor, OwnerSummary{Author: a, Files: n, Share: float64(n) / float64(len(files))})
+	for i := range o.ByAuthor {
+		o.ByAuthor[i].Share = float64(o.ByAuthor[i].Files) / float64(o.Total)
 	}
-	sort.Slice(o.ByAuthor, func(i, j int) bool {
-		if o.ByAuthor[i].Files != o.ByAuthor[j].Files {
-			return o.ByAuthor[i].Files > o.ByAuthor[j].Files
-		}
-		return o.ByAuthor[i].Author < o.ByAuthor[j].Author
-	})
 	return o, nil
 }
 

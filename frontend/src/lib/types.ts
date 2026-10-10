@@ -259,6 +259,7 @@ export interface Ownership {
 
 export interface OwnerSummary {
   author: string
+  email: string
   files: number
   share: number
 }

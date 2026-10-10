@@ -169,6 +169,19 @@ func TestRunPipeline(t *testing.T) {
 		t.Fatalf("unexpected commits: %+v", commits)
 	}
 
+	var changed []models.CommitFile
+	db.Where("repo_id = ?", repo.ID).Find(&changed)
+	if len(changed) != 6 {
+		t.Fatalf("expected 6 commit file rows (5 added, 1 edited), got %d", len(changed))
+	}
+	var owner models.FileOwnership
+	if err := db.Where("repo_id = ? AND path = ?", repo.ID, "pkg/util/util.go").First(&owner).Error; err != nil {
+		t.Fatalf("ownership: %v", err)
+	}
+	if owner.Email != "test@example.com" || owner.Commits != 2 || owner.Share != 1 {
+		t.Fatalf("unexpected ownership %+v", owner)
+	}
+
 	// FTS index populated
 	var fts int64
 	db.Raw("SELECT count(*) FROM file_fts WHERE repo_id = ?", repo.ID).Scan(&fts)

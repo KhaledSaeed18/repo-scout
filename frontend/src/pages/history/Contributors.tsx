@@ -66,7 +66,7 @@ function Ownership({ repoId }: { repoId: number }) {
   return (
     <Section
       title="File ownership"
-      description="Who last changed each file. A rough guide to who knows which code best."
+      description="Files counted for the author who made most of their commits, following renames."
     >
       <QueryView query={q} label="ownership">
         {({ byAuthor, total }) => {
@@ -75,8 +75,8 @@ function Ownership({ repoId }: { repoId: number }) {
           return (
             <ol className="grid max-w-3xl gap-3">
               {byAuthor.map((o) => (
-                <li key={o.author} className="grid grid-cols-[minmax(8rem,14rem)_1fr_auto] items-center gap-4 text-sm">
-                  <span className="truncate font-medium">{o.author}</span>
+                <li key={o.email || o.author} className="grid grid-cols-[minmax(8rem,14rem)_1fr_auto] items-center gap-4 text-sm">
+                  <span className="truncate font-medium" title={o.email}>{o.author}</span>
                   <Meter value={o.files} max={max} />
                   <span className="w-36 text-right tabular-nums text-muted-foreground">
                     {plural(o.files, 'file')}, {formatPercent(o.share)}

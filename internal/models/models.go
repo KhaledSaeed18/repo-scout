@@ -128,12 +128,25 @@ type Contributor struct {
 	LastCommitAt  time.Time `json:"lastCommitAt"`
 }
 
-// FileOwnership records the primary author share of a file.
+// CommitFile is one file a commit changed. Path is the file's latest name,
+// so a file's history carries across renames.
+type CommitFile struct {
+	ID        uint   `gorm:"primaryKey" json:"id"`
+	RepoID    uint   `gorm:"index:idx_commitfile_repo_path" json:"repoId"`
+	CommitID  uint   `gorm:"index" json:"commitId"`
+	Path      string `gorm:"index:idx_commitfile_repo_path" json:"path"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+}
+
+// FileOwnership records the author with the most commits to a file and the
+// share of the file's commits they made.
 type FileOwnership struct {
 	ID      uint    `gorm:"primaryKey" json:"id"`
-	RepoID  uint    `gorm:"index" json:"repoId"`
-	Path    string  `json:"path"`
+	RepoID  uint    `gorm:"index:idx_owner_repo_path" json:"repoId"`
+	Path    string  `gorm:"index:idx_owner_repo_path" json:"path"`
 	Author  string  `json:"author"`
+	Email   string  `json:"email"`
 	Commits int     `json:"commits"`
 	Share   float64 `json:"share"`
 }

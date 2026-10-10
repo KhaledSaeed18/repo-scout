@@ -24,11 +24,13 @@ type Meta struct {
 	TagCount      int    `json:"tagCount"`
 }
 
-// FileChange is one file touched by a commit.
+// FileChange is one file touched by a commit. OldPath is set when the commit
+// renamed the file. Binary files report zero added and deleted lines.
 type FileChange struct {
-	Path string
-	Add  int
-	Del  int
+	Path    string
+	OldPath string
+	Add     int
+	Del     int
 }
 
 // FileHistory is the rolled-up git history of one file.
@@ -221,16 +223,45 @@ func parseHeader(line string, c *models.Commit) {
 }
 
 func parseFileChange(line string) (FileChange, bool) {
-	parts := strings.Split(line, "\t")
+	parts := strings.SplitN(line, "\t", 3)
 	if len(parts) < 3 {
 		return FileChange{}, false
 	}
-	add, err1 := strconv.Atoi(parts[0])
-	del, err2 := strconv.Atoi(parts[1])
-	if err1 != nil || err2 != nil {
-		return FileChange{}, false
+	fc := FileChange{}
+	// Binary files show "-" instead of line counts.
+	if parts[0] != "-" || parts[1] != "-" {
+		add, err1 := strconv.Atoi(parts[0])
+		del, err2 := strconv.Atoi(parts[1])
+		if err1 != nil || err2 != nil {
+			return FileChange{}, false
+		}
+		fc.Add, fc.Del = add, del
 	}
-	return FileChange{Path: parts[2], Add: add, Del: del}, true
+	fc.OldPath, fc.Path = splitRename(parts[2])
+	return fc, true
+}
+
+// splitRename reads a numstat path, which for renames is either
+// "old => new" or "dir/{old => new}/file" with either side possibly empty.
+// It returns the old path (empty when not a rename) and the new path.
+func splitRename(p string) (oldPath, newPath string) {
+	if open := strings.Index(p, "{"); open >= 0 {
+		if end := strings.Index(p[open:], "}"); end > 0 {
+			inner := p[open+1 : open+end]
+			if from, to, ok := strings.Cut(inner, " => "); ok {
+				prefix, suffix := p[:open], p[open+end+1:]
+				join := func(mid string) string {
+					// An empty side leaves a doubled slash: "a/{ => b}/c" is "a/c".
+					return strings.ReplaceAll(prefix+mid+suffix, "//", "/")
+				}
+				return join(from), join(to)
+			}
+		}
+	}
+	if from, to, ok := strings.Cut(p, " => "); ok {
+		return from, to
+	}
+	return "", p
 }
 
 // AnalyzeHistory streams the whole history and rolls up contributor and
@@ -246,10 +277,33 @@ func (a *Analyzer) AnalyzeHistory(ctx context.Context, root string) (map[string]
 func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit, []FileChange) error) (map[string]*ContributorStats, map[string]*FileHistory, error) {
 	contrib := map[string]*ContributorStats{}
 	files := map[string]*FileHistory{}
+	// renamedTo maps a path to the name it was later renamed to. History
+	// streams newest first, so a rename is seen before the older commits
+	// that touched the file under its earlier name.
+	renamedTo := map[string]string{}
+	resolve := func(p string) string {
+		for range 64 { // bounded in case a history renames in a loop
+			next, ok := renamedTo[p]
+			if !ok || next == p {
+				return p
+			}
+			p = next
+		}
+		return p
+	}
 
 	err := a.StreamLogs(ctx, root, func(c models.Commit, changes []FileChange) error {
 		if c.Author == "" {
 			c.Author = c.Email
+		}
+		for i, fc := range changes {
+			changes[i].Path = resolve(fc.Path)
+			if fc.OldPath == "" || fc.OldPath == changes[i].Path {
+				continue
+			}
+			if _, seen := renamedTo[fc.OldPath]; !seen {
+				renamedTo[fc.OldPath] = changes[i].Path
+			}
 		}
 		if onCommit != nil {
 			if err := onCommit(c, changes); err != nil {
