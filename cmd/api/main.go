@@ -55,7 +55,7 @@ func main() {
 	runner := analysis.New(db)
 	mgr := jobs.New(db, runner, loadSettings, hub)
 
-	server := api.New(db, mgr, hub, settings)
+	server := api.New(db, mgr, hub, settings, cfg.AllowedHosts)
 	srv := &http.Server{
 		Addr:    cfg.Addr,
 		Handler: server.Router(),

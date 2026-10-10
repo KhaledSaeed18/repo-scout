@@ -66,7 +66,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *Server) {
 		t.Fatalf("seed analysis: %v", err)
 	}
 
-	srv := New(db, mgr, hub, repoStore)
+	srv := New(db, mgr, hub, repoStore, config.LoopbackHosts())
 	ts := httptest.NewServer(srv.Router())
 	t.Cleanup(ts.Close)
 	return ts, srv
@@ -436,5 +436,32 @@ func TestScanRequestReusesActiveJob(t *testing.T) {
 	srv.db.Model(&models.Job{}).Where("repo_id = ?", repo.ID).Count(&n)
 	if n != 1 {
 		t.Fatalf("a second scan was queued for the same repository (%d jobs)", n)
+	}
+}
+
+func TestRejectsUnknownHosts(t *testing.T) {
+	ts, _ := newTestServer(t)
+	for host, want := range map[string]int{
+		"evil.example":      http.StatusForbidden,
+		"evil.example:8080": http.StatusForbidden,
+		"localhost:5173":    http.StatusOK,
+		"127.0.0.1":         http.StatusOK,
+		"[::1]:8080":        http.StatusOK,
+		"LOCALHOST":         http.StatusOK,
+		"127.0.0.1.nip.io":  http.StatusForbidden,
+	} {
+		req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/health", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Host = host
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != want {
+			t.Errorf("Host %q: expected %d, got %d", host, want, resp.StatusCode)
+		}
 	}
 }

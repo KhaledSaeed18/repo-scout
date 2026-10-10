@@ -4,13 +4,21 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 // Runner holds process-level configuration read from the environment.
 type Runner struct {
 	Addr   string
 	DBPath string
+	// AllowedHosts are the Host header names the API answers to. Anything
+	// else is refused, which stops DNS rebinding: a website pointing its own
+	// domain at 127.0.0.1 still sends its domain as the Host.
+	AllowedHosts []string
 }
+
+// LoopbackHosts are the names the API answers to by default.
+func LoopbackHosts() []string { return []string{"localhost", "127.0.0.1", "::1"} }
 
 // FromEnv builds the runner configuration from environment variables, falling
 // back to sensible defaults.
@@ -19,7 +27,21 @@ func FromEnv() Runner {
 		// Loopback only: the API can list folders and read any repository on disk.
 		Addr:   env("REPO_SCOUT_ADDR", "127.0.0.1:8080"),
 		DBPath: env("REPO_SCOUT_DB", "data/reposcout.db"),
+		// REPO_SCOUT_ALLOWED_HOSTS adds names, comma separated, for example
+		// when the API is reached through a container or tunnel hostname.
+		AllowedHosts: append(LoopbackHosts(), splitList(os.Getenv("REPO_SCOUT_ALLOWED_HOSTS"))...),
 	}
+}
+
+// splitList splits a comma-separated list, dropping blanks.
+func splitList(s string) []string {
+	var out []string
+	for _, part := range strings.Split(s, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func env(key, fallback string) string {

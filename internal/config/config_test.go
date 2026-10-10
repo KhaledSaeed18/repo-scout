@@ -59,3 +59,15 @@ func TestFromEnvListensOnLoopbackByDefault(t *testing.T) {
 		t.Fatalf("REPO_SCOUT_ADDR must override the default, got %q", got)
 	}
 }
+
+func TestFromEnvAllowedHosts(t *testing.T) {
+	t.Setenv("REPO_SCOUT_ALLOWED_HOSTS", "")
+	if got := FromEnv().AllowedHosts; len(got) != 3 || got[0] != "localhost" {
+		t.Fatalf("expected loopback names by default, got %v", got)
+	}
+	t.Setenv("REPO_SCOUT_ALLOWED_HOSTS", " scout.internal , ,box ")
+	got := FromEnv().AllowedHosts
+	if len(got) != 5 || got[3] != "scout.internal" || got[4] != "box" {
+		t.Fatalf("expected extra hosts appended, got %v", got)
+	}
+}

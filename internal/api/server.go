@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,20 +25,27 @@ import (
 
 // Server wires handlers to a database and background job manager.
 type Server struct {
-	db       *gorm.DB
-	jobs     *jobs.Manager
-	hub      *ws.Hub
-	settings *database.SettingsStore
+	db           *gorm.DB
+	jobs         *jobs.Manager
+	hub          *ws.Hub
+	settings     *database.SettingsStore
+	allowedHosts map[string]bool
 }
 
-// New builds the server.
-func New(db *gorm.DB, mgr *jobs.Manager, hub *ws.Hub, settings *database.SettingsStore) *Server {
-	return &Server{db: db, jobs: mgr, hub: hub, settings: settings}
+// New builds the server. It answers only requests whose Host is one of
+// allowedHosts (ports ignored).
+func New(db *gorm.DB, mgr *jobs.Manager, hub *ws.Hub, settings *database.SettingsStore, allowedHosts []string) *Server {
+	hosts := make(map[string]bool, len(allowedHosts))
+	for _, h := range allowedHosts {
+		hosts[strings.ToLower(strings.Trim(h, "[]"))] = true
+	}
+	return &Server{db: db, jobs: mgr, hub: hub, settings: settings, allowedHosts: hosts}
 }
 
 // Router assembles the chi router with all routes.
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
+	r.Use(s.allowHosts)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -90,6 +99,23 @@ func (s *Server) Router() http.Handler {
 	})
 
 	return r
+}
+
+// allowHosts refuses requests addressed to an unknown host name. Without it a
+// website could rebind its domain to 127.0.0.1 and read the API from the
+// browser as a same-origin page.
+func (s *Server) allowHosts(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		if !s.allowedHosts[strings.ToLower(strings.Trim(host, "[]"))] {
+			writeErr(w, http.StatusForbidden, "host not allowed: add it to REPO_SCOUT_ALLOWED_HOSTS to reach the API by this name")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // requireJSONWrites rejects body-carrying writes that are not JSON. Browsers

@@ -33,6 +33,10 @@ whether something is a vulnerability.
   sent as `application/json`, so a page on another site cannot trigger scans
   through a simple form or `fetch` without the browser's CORS preflight, which
   the API never approves.
+- **Its address cannot be borrowed.** The API answers only requests addressed
+  to `localhost`, `127.0.0.1` or `::1`, so a site that rebinds its own domain
+  to the loopback address (DNS rebinding) is refused. Other names can be
+  added with `REPO_SCOUT_ALLOWED_HOSTS`.
 - **Nothing leaves the machine.** There is no telemetry and no outbound network
   access. Scan results, including a full-text index of file contents, are
   stored in the SQLite database (`data/reposcout.db` by default, or
