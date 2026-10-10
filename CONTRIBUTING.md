@@ -147,7 +147,10 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
    **duplicates**, and **content index** (SQLite FTS5). Results are written
    under a staging ID and swapped in with one transaction when every stage
    succeeds, along with a snapshot for the trend history; a failed or
-   cancelled scan leaves the previous results untouched.
+   cancelled scan leaves the previous results untouched. On a rescan the
+   history stage lists commits cheaply and reuses the file changes the last
+   scan stored for commits it already knows (`gitrepo.ChangeCache`), so only
+   new commits are diffed.
 3. Stages report progress through the `jobs.Reporter` interface. The reporter
    throttles database writes and the manager broadcasts `job.progress` and
    `job.state_changed` events over the WebSocket. When the job ends the

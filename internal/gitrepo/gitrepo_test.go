@@ -293,7 +293,7 @@ func TestAnalyzeHistoryFollowsRenames(t *testing.T) {
 	git(t, root, "commit", "-qam", "edit again")
 
 	var paths []string
-	_, files, err := New().AnalyzeHistoryWithCommits(context.Background(), root, func(_ models.Commit, fcs []FileChange) error {
+	_, files, err := New().AnalyzeHistoryWithCommits(context.Background(), root, nil, func(_ models.Commit, fcs []FileChange) error {
 		for _, fc := range fcs {
 			paths = append(paths, fc.Path)
 		}
@@ -330,5 +330,90 @@ func TestStreamLogsAppliesMailmap(t *testing.T) {
 		if a != "Real Name <real@example.com>" {
 			t.Fatalf("expected mailmapped identity, got %v", authors)
 		}
+	}
+}
+
+// mapCache is a ChangeCache over a map, counting what it served.
+type mapCache struct {
+	changes map[string][]FileChange
+	served  int
+}
+
+func (m *mapCache) Has(hash string) (bool, error) {
+	_, ok := m.changes[hash]
+	return ok, nil
+}
+
+func (m *mapCache) Changes(hash string) ([]FileChange, error) {
+	m.served++
+	return m.changes[hash], nil
+}
+
+// collect streams history into commit order and changes per commit.
+func collect(t *testing.T, stream func(fn func(models.Commit, []FileChange) error) error) ([]string, map[string][]FileChange) {
+	t.Helper()
+	var order []string
+	got := map[string][]FileChange{}
+	if err := stream(func(c models.Commit, files []FileChange) error {
+		order = append(order, c.Hash)
+		got[c.Hash] = files
+		return nil
+	}); err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	return order, got
+}
+
+func TestStreamCachedMatchesAFullStream(t *testing.T) {
+	root := makeRepo(t)
+	a := New()
+	ctx := context.Background()
+	_, before := collect(t, func(fn func(models.Commit, []FileChange) error) error { return a.StreamLogs(ctx, root, fn) })
+
+	// New work after the first scan, including a binary file.
+	writeFile(t, root, "d.go", "package d\n\nfunc D() {}\n")
+	writeFile(t, root, "logo.bin", "\x00\x01\x02")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "add d")
+
+	cache := &mapCache{changes: before}
+	order, cached := collect(t, func(fn func(models.Commit, []FileChange) error) error {
+		return a.streamCached(ctx, root, cache, fn)
+	})
+	fullOrder, full := collect(t, func(fn func(models.Commit, []FileChange) error) error { return a.StreamLogs(ctx, root, fn) })
+
+	if strings.Join(order, ",") != strings.Join(fullOrder, ",") {
+		t.Fatalf("history order differs:\ncached %v\nfull   %v", order, fullOrder)
+	}
+	for hash, files := range full {
+		if len(files) != len(cached[hash]) {
+			t.Fatalf("commit %s: cached %v, full %v", hash, cached[hash], files)
+		}
+		for i := range files {
+			if files[i].Path != cached[hash][i].Path || files[i].Add != cached[hash][i].Add {
+				t.Fatalf("commit %s: cached %v, full %v", hash, cached[hash], files)
+			}
+		}
+	}
+	if cache.served != len(before) {
+		t.Fatalf("expected the %d known commits served from the cache, got %d", len(before), cache.served)
+	}
+}
+
+func TestStreamCachedDropsRewrittenHistory(t *testing.T) {
+	root := makeRepo(t)
+	a := New()
+	ctx := context.Background()
+	_, before := collect(t, func(fn func(models.Commit, []FileChange) error) error { return a.StreamLogs(ctx, root, fn) })
+
+	// Rewrite the tip: the old tip commit is no longer part of the history.
+	git(t, root, "commit", "-q", "--amend", "-m", "merge feature, reworded")
+	cache := &mapCache{changes: before}
+	order, _ := collect(t, func(fn func(models.Commit, []FileChange) error) error {
+		return a.streamCached(ctx, root, cache, fn)
+	})
+	fullOrder, _ := collect(t, func(fn func(models.Commit, []FileChange) error) error { return a.StreamLogs(ctx, root, fn) })
+	if strings.Join(order, ",") != strings.Join(fullOrder, ",") {
+		t.Fatalf("expected the rewritten history, got %v want %v", order, fullOrder)
 	}
 }

@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"fmt"
 	"context"
 	"os"
 	"os/exec"
@@ -351,5 +352,92 @@ func TestScanOfARemovedFolderFails(t *testing.T) {
 	db.Model(&models.File{}).Where("repo_id = ?", repo.ID).Count(&files)
 	if repo.Status != models.RepoReady || files != 5 {
 		t.Fatalf("expected the previous results kept and the repo ready, got %s with %d files", repo.Status, files)
+	}
+}
+
+// history captures what a scan stored about the history, keyed by content
+// rather than row IDs, so two scans can be compared.
+func history(t *testing.T, db *gorm.DB, repoID uint) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	var changes []struct {
+		Hash, Path string
+		Additions  int
+		Deletions  int
+	}
+	if err := db.Raw(`SELECT c.hash, cf.path, cf.additions, cf.deletions FROM commit_files cf
+		JOIN commits c ON c.id = cf.commit_id WHERE cf.repo_id = ?`, repoID).Scan(&changes).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range changes {
+		out["change "+c.Hash+" "+c.Path] = fmt.Sprintf("+%d -%d", c.Additions, c.Deletions)
+	}
+	var owners []models.FileOwnership
+	db.Where("repo_id = ?", repoID).Find(&owners)
+	for _, o := range owners {
+		out["owner "+o.Path] = fmt.Sprintf("%s %d %.2f", o.Email, o.Commits, o.Share)
+	}
+	var people []models.Contributor
+	db.Where("repo_id = ?", repoID).Find(&people)
+	for _, p := range people {
+		out["contributor "+p.Email] = fmt.Sprintf("%d +%d -%d", p.Commits, p.Insertions, p.Deletions)
+	}
+	var files []models.File
+	db.Where("repo_id = ?", repoID).Find(&files)
+	for _, f := range files {
+		out["file "+f.Path] = fmt.Sprintf("%d %s", f.Commits, f.Author)
+	}
+	return out
+}
+
+func TestIncrementalRescanMatchesAFullScan(t *testing.T) {
+	db := testDB(t)
+	root := makeFixture(t)
+	repo := models.Repository{Name: "demo", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	r := New(db)
+	if err := r.Run(context.Background(), repo.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("first scan: %v", err)
+	}
+
+	// New history: an edit, a rename and a new file.
+	write(t, root, "pkg/util/util.go", "package util\n\nfunc Help() {\n\tprintln(\"hi\")\n}\n")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "edit helper")
+	git(t, root, "mv", "pkg/dup/two.go", "pkg/dup/second.go")
+	write(t, root, "pkg/extra.go", "package pkg\n")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "rename and add")
+
+	db.First(&repo, repo.ID)
+	if r.historyCache(&repo) == nil {
+		t.Fatal("expected the previous scan to be usable as a cache")
+	}
+	if err := r.Run(context.Background(), repo.ID, 2, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("incremental rescan: %v", err)
+	}
+
+	fresh := testDB(t)
+	clean := models.Repository{Name: "demo", Path: root}
+	if err := fresh.Create(&clean).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := New(fresh).Run(context.Background(), clean.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("full scan: %v", err)
+	}
+
+	got, want := history(t, db, repo.ID), history(t, fresh, clean.ID)
+	if len(got) != len(want) {
+		t.Errorf("incremental stored %d facts, full scan %d", len(got), len(want))
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s: incremental %q, full %q", k, got[k], v)
+		}
+	}
+	if _, ok := got["file pkg/dup/second.go"]; !ok {
+		t.Error("expected the renamed file in the results")
 	}
 }

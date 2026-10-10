@@ -130,7 +130,9 @@ persist their state: pause, resume, and cancel are state changes, a
 repository never runs two scans at once, and a scan interrupted by a crash
 is re-queued and starts over on the next launch. A rescan builds its results
 on the side and swaps them in only when every stage succeeds, so a cancelled
-or failed rescan leaves the previous results untouched.
+or failed rescan leaves the previous results untouched. Rescans also reuse
+what the last scan learned from history and ask git to diff only the commits
+it has not seen, so they get cheaper as history grows.
 
 ## Requirements
 

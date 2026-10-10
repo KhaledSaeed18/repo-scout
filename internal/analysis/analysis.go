@@ -81,7 +81,7 @@ func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter,
 		{"scanning files", func() error {
 			return r.fileScan(ctx, &work, settings, rep, 1, stageCount)
 		}},
-		{"git history", func() error { return r.gitHistory(ctx, &work, rep, read) }},
+		{"git history", func() error { return r.gitHistory(ctx, &work, r.historyCache(&repo), rep) }},
 		{"dependencies", func() error { return r.dependencies(ctx, &work, read) }},
 		{"import graph", func() error { return r.importGraph(ctx, &work, read) }},
 		{"change coupling", func() error { return coupling.Compute(r.db, work.ID) }},
@@ -248,7 +248,7 @@ func (r *Runner) fileScan(ctx context.Context, repo *models.Repository, settings
 	return err
 }
 
-func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jobs.Reporter, read func(string) (string, error)) error {
+func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, cache gitrepo.ChangeCache, rep jobs.Reporter) error {
 	git := gitrepo.New()
 	if !git.Available() || !git.IsRepo(repo.Path) {
 		return nil
@@ -282,7 +282,7 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 		return nil
 	}
 	seen := 0
-	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, fcs []gitrepo.FileChange) error {
+	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, cache, func(c models.Commit, fcs []gitrepo.FileChange) error {
 		c.RepoID = repo.ID
 		c.FilesChanged = len(fcs)
 		for _, fc := range fcs {
@@ -333,6 +333,43 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 	}
 	rep.SetMessage("git history analyzed")
 	return rep.Checkpoint(ctx)
+}
+
+// historyCache returns the previous scan's commits as a cache, so a rescan
+// only diffs new commits, or nil when there is no usable previous scan:
+// never scanned, or scanned before the files of each commit were recorded.
+func (r *Runner) historyCache(repo *models.Repository) gitrepo.ChangeCache {
+	if repo.LastScannedAt == nil {
+		return nil
+	}
+	var recorded int64
+	if err := r.db.Model(&models.CommitFile{}).Where("repo_id = ?", repo.ID).Limit(1).Count(&recorded).Error; err != nil || recorded == 0 {
+		return nil
+	}
+	return &historyCache{db: r.db, repoID: repo.ID}
+}
+
+// historyCache serves file changes stored by a repository's previous scan.
+type historyCache struct {
+	db     *gorm.DB
+	repoID uint
+}
+
+func (c *historyCache) Has(hash string) (bool, error) {
+	var n int64
+	err := c.db.Model(&models.Commit{}).Where("repo_id = ? AND hash = ?", c.repoID, hash).Count(&n).Error
+	return n > 0, err
+}
+
+func (c *historyCache) Changes(hash string) ([]gitrepo.FileChange, error) {
+	var rows []gitrepo.FileChange
+	err := c.db.Raw(`SELECT cf.path, cf.additions AS "add", cf.deletions AS del
+		FROM commit_files cf JOIN commits c ON c.id = cf.commit_id
+		WHERE c.repo_id = ? AND c.hash = ? ORDER BY cf.id`, c.repoID, hash).Scan(&rows).Error
+	if err != nil {
+		return nil, fmt.Errorf("cached changes of %s: %w", hash, err)
+	}
+	return rows, nil
 }
 
 // fileOwnership stores, for every scanned file with history, the author who
