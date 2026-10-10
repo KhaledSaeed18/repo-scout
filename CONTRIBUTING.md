@@ -198,8 +198,11 @@ frontend/src/
 - **SQL:** user text in `LIKE` must be escaped (see `escapeLike`), paged
   queries need a unique tie-breaker in `ORDER BY`, and new queries should be
   scoped by `repo_id`.
-- **API contracts** live in `frontend/src/lib/types.ts`. Change both sides in
-  the same pull request.
+- **API contracts** are described in `internal/api/openapi.yaml` (served at
+  `/api/openapi.yaml`) and mirrored by `frontend/src/lib/types.ts`. Contract
+  tests fail when a route is missing from the spec or a response does not
+  match its schema, so change the handler, the spec and the types together.
+  Lists are always `[]`, never `null`.
 - Format with `gofmt`; `go vet` and golangci-lint (config in `.golangci.yml`)
   must pass.
 
@@ -296,7 +299,9 @@ What to test:
 1. Write the handler in the matching file in `internal/api`, register it in
    `Router()`, and validate input with `parseID`, `queryInt` and `writeErr`.
 2. Add a test in `internal/api/api_test.go`.
-3. Add the response type to `frontend/src/lib/types.ts`, a function to `api`,
+3. Describe it in `internal/api/openapi.yaml` and add a call to
+   `TestResponsesMatchSpec` in `internal/api/openapi_test.go`.
+4. Add the response type to `frontend/src/lib/types.ts`, a function to `api`,
    and a hook with a complete query key in `frontend/src/lib/api.ts`.
 
 ### Add a page

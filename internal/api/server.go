@@ -76,6 +76,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(requireJSONWrites)
 
 	r.Get("/api/health", s.handleHealth)
+	r.Get("/api/openapi.yaml", s.handleOpenAPI)
 	r.Get("/api/ws", s.handleWS)
 	r.Get("/api/browse", s.handleBrowse)
 

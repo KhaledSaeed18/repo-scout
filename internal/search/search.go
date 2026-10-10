@@ -125,8 +125,25 @@ func (s *Store) Reindex(ctx context.Context, repoID uint, root string, files []m
 	return flush()
 }
 
-// Search runs a query against the given repository.
+// Search runs a query against the given repository. Results always carry
+// lists, empty rather than nil, so clients never see null.
 func (s *Store) Search(ctx context.Context, q Query, settings config.Settings) (Result, error) {
+	res, err := s.search(ctx, q, settings)
+	if err != nil {
+		return Result{}, err
+	}
+	if res.Hits == nil {
+		res.Hits = []Hit{}
+	}
+	for i := range res.Hits {
+		if res.Hits[i].Matches == nil {
+			res.Hits[i].Matches = []Match{}
+		}
+	}
+	return res, nil
+}
+
+func (s *Store) search(ctx context.Context, q Query, settings config.Settings) (Result, error) {
 	if q.Limit <= 0 || q.Limit > 200 {
 		q.Limit = 50
 	}

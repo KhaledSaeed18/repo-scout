@@ -54,8 +54,11 @@ Frontend commands run with `cd frontend && pnpm run ...`.
   new numbered migration in `internal/database/migrations.go`. Never edit a
   shipped migration.
 - No placeholder UI, no unfinished pages, no dead exports.
-- TypeScript: strict mode, shared types generated alongside the API contracts
-  in `frontend/src/lib/types.ts`.
+- API contract: `internal/api/openapi.yaml` describes every endpoint; contract
+  tests check routes and responses against it. `frontend/src/lib/types.ts`
+  mirrors it. Change handler, spec and types together. Lists are `[]`, never
+  `null`.
+- TypeScript: strict mode.
 - Pure frontend logic (formatting, calendar, graph layout, highlighting) lives
   in `frontend/src/lib/*.ts` with a `*.test.ts` beside it.
 

@@ -224,6 +224,13 @@ jobs:
           category: repo-scout
 ```
 
+## API
+
+Everything the interface does goes through a local JSON API, described in
+[`internal/api/openapi.yaml`](internal/api/openapi.yaml) and served by a
+running instance at http://localhost:8080/api/openapi.yaml. Scripts can use
+it to add repositories, start scans and read every result.
+
 ## Commands
 
 - `make dev`: backend + frontend together

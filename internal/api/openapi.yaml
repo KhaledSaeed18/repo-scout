@@ -1,0 +1,1122 @@
+openapi: 3.0.3
+info:
+  title: Repo Scout API
+  version: "1"
+  description: |
+    The local API behind the Repo Scout interface. It listens on loopback and
+    has no authentication; see SECURITY.md for the security model.
+
+    Requests that change state must send `Content-Type: application/json`.
+    Requests must name `localhost`, `127.0.0.1` or `::1` as the host (or a
+    name in `REPO_SCOUT_ALLOWED_HOSTS`). Errors are `{"error": "..."}` with an
+    honest status code. Live job and repository events stream over the
+    WebSocket at `/api/ws`.
+  license:
+    name: MIT
+    url: https://github.com/KhaledSaeed18/repo-scout/blob/main/LICENSE
+servers:
+  - url: http://127.0.0.1:8080
+
+tags:
+  - name: Repositories
+  - name: History
+  - name: Code
+  - name: Structure
+  - name: Jobs
+  - name: App
+
+paths:
+  /api/health:
+    get:
+      tags: [App]
+      summary: Liveness check
+      operationId: health
+      responses:
+        "200":
+          description: The server is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [status, time]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  time: { type: string, format: date-time }
+
+  /api/openapi.yaml:
+    get:
+      tags: [App]
+      summary: This document
+      operationId: openapi
+      responses:
+        "200":
+          description: The OpenAPI description of the API.
+          content:
+            application/yaml:
+              schema: { type: string }
+
+  /api/browse:
+    get:
+      tags: [App]
+      summary: List the folders inside a folder, marking Git repositories
+      operationId: browse
+      parameters:
+        - name: path
+          in: query
+          description: Folder to list; the home folder when empty.
+          schema: { type: string }
+      responses:
+        "200":
+          description: The folder and its subfolders.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BrowseResponse" }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/repositories:
+    get:
+      tags: [Repositories]
+      summary: List repositories
+      operationId: listRepositories
+      responses:
+        "200":
+          description: Every added repository.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [repositories]
+                properties:
+                  repositories:
+                    type: array
+                    items: { $ref: "#/components/schemas/Repository" }
+    post:
+      tags: [Repositories]
+      summary: Add a repository, or rescan one already added
+      description: Queues a scan. A repository has at most one live scan; asking again returns it.
+      operationId: scanRepository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                path: { type: string, description: "Folder to scan." }
+      responses:
+        "202":
+          description: The scan is queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [repository, job]
+                properties:
+                  repository: { $ref: "#/components/schemas/Repository" }
+                  job: { $ref: "#/components/schemas/Job" }
+        "400": { $ref: "#/components/responses/Error" }
+        "415": { $ref: "#/components/responses/Error" }
+
+  /api/repositories/{id}:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Repositories]
+      summary: Get a repository with its summary numbers
+      operationId: getRepository
+      responses:
+        "200":
+          description: The repository.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Repository" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [Repositories]
+      summary: Remove a repository and all of its scan results
+      operationId: deleteRepository
+      responses:
+        "200":
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [deleted]
+                properties:
+                  deleted: { type: boolean }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/repositories/{id}/files:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: Page through files with their metrics
+      operationId: listFiles
+      parameters:
+        - { name: path, in: query, schema: { type: string }, description: "Exact file path." }
+        - { name: folder, in: query, schema: { type: string } }
+        - { name: ext, in: query, schema: { type: string } }
+        - { name: language, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [loc, complexity, name] } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: A page of files and the total matching.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [files, total]
+                properties:
+                  files: { type: array, items: { $ref: "#/components/schemas/File" } }
+                  total: { type: integer }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/repositories/{id}/tree:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: One level of the file tree
+      operationId: tree
+      parameters:
+        - { name: folder, in: query, schema: { type: string }, description: "Folder to open; the root when empty." }
+      responses:
+        "200":
+          description: Subfolder names and the files directly inside the folder.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [folder, folders, files]
+                properties:
+                  folder: { type: string }
+                  folders: { type: array, items: { type: string } }
+                  files: { type: array, items: { $ref: "#/components/schemas/File" } }
+
+  /api/repositories/{id}/commits:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Commits, newest first
+      operationId: listCommits
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: A page of commits.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [commits]
+                properties:
+                  commits: { type: array, items: { $ref: "#/components/schemas/Commit" } }
+
+  /api/repositories/{id}/contributors:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Contributors by number of commits
+      operationId: listContributors
+      responses:
+        "200":
+          description: Every contributor.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [contributors]
+                properties:
+                  contributors: { type: array, items: { $ref: "#/components/schemas/Contributor" } }
+
+  /api/repositories/{id}/largest-commits:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: The commits that changed the most lines
+      operationId: largestCommits
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: Largest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [commits]
+                properties:
+                  commits: { type: array, items: { $ref: "#/components/schemas/LargestCommit" } }
+
+  /api/repositories/{id}/ownership:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Files per main author
+      operationId: ownership
+      responses:
+        "200":
+          description: Each author with the number of files they made the most commits to.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ownership" }
+
+  /api/repositories/{id}/branches:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Local branches at the last scan
+      operationId: listBranches
+      responses:
+        "200":
+          description: Branches.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [branches]
+                properties:
+                  branches: { type: array, items: { $ref: "#/components/schemas/Branch" } }
+
+  /api/repositories/{id}/tags:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Tags at the last scan
+      operationId: listTags
+      responses:
+        "200":
+          description: Tags.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tags]
+                properties:
+                  tags: { type: array, items: { $ref: "#/components/schemas/Tag" } }
+
+  /api/repositories/{id}/heatmap:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: Commit activity by day and hour of week, and streaks
+      operationId: heatmap
+      responses:
+        "200":
+          description: Activity on each author's local clock.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [heatmap, streaks]
+                properties:
+                  heatmap: { $ref: "#/components/schemas/Heatmap" }
+                  streaks: { type: array, items: { $ref: "#/components/schemas/StreaksResult" } }
+
+  /api/repositories/{id}/knowledge:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [History]
+      summary: How main authorship of the code is spread across people
+      operationId: knowledge
+      parameters:
+        - { name: depth, in: query, schema: { type: integer, minimum: 1, maximum: 6, default: 2 }, description: "Folder depth to group by." }
+        - { name: inactiveMonths, in: query, schema: { type: integer, minimum: 1, maximum: 120, default: 6 } }
+      responses:
+        "200":
+          description: Bus factor, folders, files at risk and main authors.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/KnowledgeReport" }
+
+  /api/repositories/{id}/dependencies:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Structure]
+      summary: Declared packages grouped by package manager
+      operationId: dependencies
+      responses:
+        "200":
+          description: Dependencies.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [managers, dependencies, total]
+                properties:
+                  managers: { type: array, items: { type: string } }
+                  dependencies:
+                    type: object
+                    additionalProperties: { type: array, items: { $ref: "#/components/schemas/Dependency" } }
+                  total: { type: integer }
+
+  /api/repositories/{id}/duplicates:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: Groups of similar code blocks
+      operationId: duplicates
+      responses:
+        "200":
+          description: Largest groups first.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [groups, total]
+                properties:
+                  groups: { type: array, items: { $ref: "#/components/schemas/DuplicateGroup" } }
+                  total: { type: integer }
+
+  /api/repositories/{id}/architecture:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Structure]
+      summary: Import graph, cycles, entry points, dead files and unused folders
+      operationId: architecture
+      responses:
+        "200":
+          description: The architecture report.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Architecture" }
+
+  /api/repositories/{id}/coupling:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Structure]
+      summary: Files that change together, strongest first
+      operationId: coupling
+      parameters:
+        - { name: path, in: query, schema: { type: string }, description: "Only pairs involving this file." }
+        - { name: hidden, in: query, schema: { type: boolean }, description: "Only pairs nothing explains." }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Coupled pairs.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [pairs]
+                properties:
+                  pairs: { type: array, items: { $ref: "#/components/schemas/CouplingPair" } }
+
+  /api/repositories/{id}/metrics:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: Size and complexity totals, by language, and the largest and most complex files
+      operationId: metrics
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: Metrics.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Metrics" }
+
+  /api/repositories/{id}/hotspots:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: Complex files ranked by how often they changed
+      operationId: hotspots
+      parameters:
+        - { name: months, in: query, schema: { type: integer, minimum: 0, maximum: 240, default: 12 }, description: "Window counted back from the latest commit; 0 for all history." }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: The ranking and the window it covers.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HotspotReport" }
+
+  /api/repositories/{id}/trends:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Code]
+      summary: Headline numbers of past scans, oldest first
+      operationId: trends
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: Snapshots.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [snapshots]
+                properties:
+                  snapshots: { type: array, items: { $ref: "#/components/schemas/ScanSnapshot" } }
+
+  /api/repositories/{id}/svg:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Structure]
+      summary: The import graph as an SVG download
+      operationId: architectureSVG
+      responses:
+        "200":
+          description: SVG document.
+          content:
+            image/svg+xml:
+              schema: { type: string }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /api/repositories/{id}/export:
+    parameters: [{ $ref: "#/components/parameters/RepoID" }]
+    get:
+      tags: [Repositories]
+      summary: Download files, commits or contributors
+      operationId: export
+      parameters:
+        - { name: kind, in: query, required: true, schema: { type: string, enum: [files, commits, contributors] } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, json], default: csv } }
+      responses:
+        "200":
+          description: The dataset as an attachment.
+          content:
+            text/csv:
+              schema: { type: string }
+            application/json:
+              schema: { type: array, items: { type: object } }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/search:
+    get:
+      tags: [Code]
+      summary: Search file names, folders, extensions or contents
+      operationId: search
+      parameters:
+        - { name: repo, in: query, required: true, schema: { type: integer } }
+        - { name: query, in: query, required: true, schema: { type: string } }
+        - { name: mode, in: query, schema: { type: string, enum: [content, regex, filename, folder, extension], default: content } }
+        - { name: case, in: query, schema: { type: boolean }, description: "Case-sensitive." }
+        - { name: word, in: query, schema: { type: boolean }, description: "Whole words only." }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Matching files, with matching lines for content searches.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResult" }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/jobs:
+    get:
+      tags: [Jobs]
+      summary: Recent jobs, newest first
+      operationId: listJobs
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: Jobs.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [jobs]
+                properties:
+                  jobs: { type: array, items: { $ref: "#/components/schemas/Job" } }
+
+  /api/jobs/{id}/pause:
+    parameters: [{ $ref: "#/components/parameters/JobID" }]
+    post:
+      tags: [Jobs]
+      summary: Pause a running job
+      operationId: pauseJob
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/jobs/{id}/resume:
+    parameters: [{ $ref: "#/components/parameters/JobID" }]
+    post:
+      tags: [Jobs]
+      summary: Resume a paused job
+      operationId: resumeJob
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/jobs/{id}/cancel:
+    parameters: [{ $ref: "#/components/parameters/JobID" }]
+    post:
+      tags: [Jobs]
+      summary: Cancel a queued, running or paused job
+      operationId: cancelJob
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/settings:
+    get:
+      tags: [App]
+      summary: Scan and interface preferences
+      operationId: getSettings
+      responses:
+        "200":
+          description: Settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+    put:
+      tags: [App]
+      summary: Save preferences
+      operationId: putSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Settings" }
+      responses:
+        "200":
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+        "400": { $ref: "#/components/responses/Error" }
+
+components:
+  parameters:
+    RepoID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    JobID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 0 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0 }
+
+  responses:
+    Error:
+      description: What failed.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [error]
+            properties:
+              error: { type: string }
+    OK:
+      description: Done.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [ok]
+            properties:
+              ok: { type: boolean }
+
+  schemas:
+    Repository:
+      type: object
+      additionalProperties: false
+      required: [id, name, path, status, gitRemote, headCommit, defaultBranch, lastScannedAt, fileCount, totalLOC,
+        totalCode, totalComments, totalBlank, totalSize, commitCount, contributorCount, dependencyCount, dupGroupCount,
+        createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        path: { type: string }
+        status: { type: string, enum: ["", scanning, ready, failed], description: "Empty until a worker picks up the first scan." }
+        gitRemote: { type: string }
+        headCommit: { type: string }
+        defaultBranch: { type: string }
+        lastScannedAt: { type: string, format: date-time, nullable: true }
+        fileCount: { type: integer }
+        totalLOC: { type: integer }
+        totalCode: { type: integer }
+        totalComments: { type: integer }
+        totalBlank: { type: integer }
+        totalSize: { type: integer }
+        commitCount: { type: integer }
+        contributorCount: { type: integer }
+        dependencyCount: { type: integer }
+        dupGroupCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    File:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, path, name, folder, extension, language, size, linesTotal, linesCode, linesComment,
+        linesBlank, complexity, imports, exports, author, firstCommitAt, lastCommitAt, commits, funcCount, avgFuncLen,
+        maxFuncLen, avgNesting, maxNesting]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        path: { type: string }
+        name: { type: string }
+        folder: { type: string }
+        extension: { type: string }
+        language: { type: string }
+        size: { type: integer }
+        linesTotal: { type: integer }
+        linesCode: { type: integer }
+        linesComment: { type: integer }
+        linesBlank: { type: integer }
+        complexity: { type: integer }
+        imports: { type: integer }
+        exports: { type: integer }
+        author: { type: string, description: "Who last changed the file." }
+        firstCommitAt: { type: string, format: date-time, nullable: true }
+        lastCommitAt: { type: string, format: date-time, nullable: true }
+        commits: { type: integer }
+        funcCount: { type: integer }
+        avgFuncLen: { type: number }
+        maxFuncLen: { type: integer }
+        avgNesting: { type: number }
+        maxNesting: { type: integer }
+
+    Commit:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, hash, author, email, date, tzOffset, message, filesChanged, insertions, deletions, isMerge]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        hash: { type: string }
+        author: { type: string }
+        email: { type: string }
+        date: { type: string, format: date-time }
+        tzOffset: { type: integer, description: "Author's UTC offset in minutes." }
+        message: { type: string }
+        filesChanged: { type: integer }
+        insertions: { type: integer }
+        deletions: { type: integer }
+        isMerge: { type: boolean }
+
+    LargestCommit:
+      type: object
+      additionalProperties: false
+      required: [hash, author, email, date, message, filesChanged, insertions, deletions]
+      properties:
+        hash: { type: string }
+        author: { type: string }
+        email: { type: string }
+        date: { type: string, format: date-time }
+        message: { type: string }
+        filesChanged: { type: integer }
+        insertions: { type: integer }
+        deletions: { type: integer }
+
+    Contributor:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, name, email, commits, insertions, deletions, firstCommitAt, lastCommitAt]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        commits: { type: integer }
+        insertions: { type: integer }
+        deletions: { type: integer }
+        firstCommitAt: { type: string, format: date-time }
+        lastCommitAt: { type: string, format: date-time }
+
+    Ownership:
+      type: object
+      additionalProperties: false
+      required: [byAuthor, total]
+      properties:
+        byAuthor:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [author, email, files, share]
+            properties:
+              author: { type: string }
+              email: { type: string }
+              files: { type: integer }
+              share: { type: number }
+        total: { type: integer }
+
+    Branch:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, name, commitHash, isCurrent]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        name: { type: string }
+        commitHash: { type: string }
+        isCurrent: { type: boolean }
+
+    Tag:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, name, commitHash]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        name: { type: string }
+        commitHash: { type: string }
+
+    Heatmap:
+      type: object
+      additionalProperties: false
+      required: [daily, hourly, total, start, end]
+      properties:
+        daily:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, count]
+            properties:
+              date: { type: string, format: date }
+              count: { type: integer }
+        hourly:
+          type: array
+          description: Commits by [weekday][hour]; weekday 0 is Sunday.
+          items: { type: array, items: { type: integer } }
+        total: { type: integer }
+        start: { type: string }
+        end: { type: string }
+
+    Streak:
+      type: object
+      additionalProperties: false
+      required: [start, end, days]
+      properties:
+        start: { type: string }
+        end: { type: string }
+        days: { type: integer }
+
+    StreaksResult:
+      type: object
+      additionalProperties: false
+      required: [email, longest, current, all, activeDays, totalCommits]
+      properties:
+        email: { type: string }
+        longest: { $ref: "#/components/schemas/Streak" }
+        current: { $ref: "#/components/schemas/Streak" }
+        all: { type: array, items: { $ref: "#/components/schemas/Streak" } }
+        activeDays: { type: integer }
+        totalCommits: { type: integer }
+
+    KnowledgeReport:
+      type: object
+      additionalProperties: false
+      required: [busFactor, files, lines, inactiveLines, owners, folders, atRisk, activeSince]
+      properties:
+        busFactor: { type: integer }
+        files: { type: integer }
+        lines: { type: integer }
+        inactiveLines: { type: integer }
+        owners:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [author, email, files, lines, active, lastCommitAt]
+            properties:
+              author: { type: string }
+              email: { type: string }
+              files: { type: integer }
+              lines: { type: integer }
+              active: { type: boolean }
+              lastCommitAt: { type: string, format: date-time }
+        folders:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [folder, files, lines, owners, topOwner, topOwnerShare, inactiveShare]
+            properties:
+              folder: { type: string }
+              files: { type: integer }
+              lines: { type: integer }
+              owners: { type: integer }
+              topOwner: { type: string }
+              topOwnerShare: { type: number }
+              inactiveShare: { type: number }
+        atRisk:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [path, lines, owner, ownerShare, ownerLastCommitAt]
+            properties:
+              path: { type: string }
+              lines: { type: integer }
+              owner: { type: string }
+              ownerShare: { type: number }
+              ownerLastCommitAt: { type: string, format: date-time }
+        activeSince: { type: string, format: date-time, nullable: true }
+
+    Dependency:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, filePath, manager, name, version, scope]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        filePath: { type: string }
+        manager: { type: string }
+        name: { type: string }
+        version: { type: string }
+        scope: { type: string }
+
+    DuplicateGroup:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, fragment, lines, similarity, fileCount, blocks]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        fragment: { type: string }
+        lines: { type: integer }
+        similarity: { type: number }
+        fileCount: { type: integer }
+        blocks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, groupId, repoId, filePath, startLine, endLine]
+            properties:
+              id: { type: integer }
+              groupId: { type: integer }
+              repoId: { type: integer }
+              filePath: { type: string }
+              startLine: { type: integer }
+              endLine: { type: integer }
+
+    ArchEdge:
+      type: object
+      additionalProperties: false
+      required: [from, to, kind, resolved]
+      properties:
+        from: { type: string }
+        to: { type: string }
+        kind: { type: string }
+        resolved: { type: boolean }
+
+    Architecture:
+      type: object
+      additionalProperties: false
+      required: [edges, cycles, unusedModules, deadFiles, entryPoints, unresolved, folders]
+      properties:
+        edges: { type: array, items: { $ref: "#/components/schemas/ArchEdge" } }
+        cycles: { type: array, items: { type: array, items: { type: string } } }
+        unusedModules: { type: array, items: { type: string } }
+        deadFiles: { type: array, items: { type: string } }
+        entryPoints: { type: array, items: { type: string } }
+        unresolved: { type: array, items: { $ref: "#/components/schemas/ArchEdge" } }
+        folders: { type: array, items: { type: string } }
+
+    CouplingPair:
+      type: object
+      additionalProperties: false
+      required: [fileA, fileB, shared, revisionsA, revisionsB, degree, link]
+      properties:
+        fileA: { type: string }
+        fileB: { type: string }
+        shared: { type: integer, description: "Commits that changed both files." }
+        revisionsA: { type: integer }
+        revisionsB: { type: integer }
+        degree: { type: number, description: "Shared commits over the average of both files' commits." }
+        link:
+          type: string
+          enum: ["", import, package, test, lockfile]
+          description: Why the pair is expected to change together; empty for a hidden dependency.
+
+    Metrics:
+      type: object
+      additionalProperties: false
+      required: [totals, languages, maxDepth, deepestFile, largestFiles, mostComplexFiles]
+      properties:
+        totals:
+          type: object
+          additionalProperties: false
+          required: [files, loc, code, comments, blank, complexity, funcs, imports, exports]
+          properties:
+            files: { type: integer }
+            loc: { type: integer }
+            code: { type: integer }
+            comments: { type: integer }
+            blank: { type: integer }
+            complexity: { type: integer }
+            funcs: { type: integer }
+            imports: { type: integer }
+            exports: { type: integer }
+        languages:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            required: [files, loc, code]
+            properties:
+              files: { type: integer }
+              loc: { type: integer }
+              code: { type: integer }
+        maxDepth: { type: integer }
+        deepestFile: { type: string }
+        largestFiles: { type: array, items: { $ref: "#/components/schemas/File" } }
+        mostComplexFiles: { type: array, items: { $ref: "#/components/schemas/File" } }
+
+    HotspotReport:
+      type: object
+      additionalProperties: false
+      required: [hotspots, since, until, files]
+      properties:
+        hotspots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [path, language, complexity, linesCode, revisions, churn, authors, lastCommitAt, score]
+            properties:
+              path: { type: string }
+              language: { type: string }
+              complexity: { type: integer }
+              linesCode: { type: integer }
+              revisions: { type: integer, description: "Commits that changed the file within the window." }
+              churn: { type: integer, description: "Lines added plus deleted within the window." }
+              authors: { type: integer }
+              lastCommitAt: { type: string, format: date-time, nullable: true }
+              score: { type: number, description: "Revisions times complexity, relative to the top hotspot." }
+        since: { type: string, format: date-time, nullable: true }
+        until: { type: string, format: date-time, nullable: true }
+        files: { type: integer }
+
+    ScanSnapshot:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, scannedAt, headCommit, fileCount, totalCode, complexity, functions, commitCount,
+        contributorCount, dependencyCount, dupGroupCount]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        scannedAt: { type: string, format: date-time }
+        headCommit: { type: string }
+        fileCount: { type: integer }
+        totalCode: { type: integer }
+        complexity: { type: integer }
+        functions: { type: integer }
+        commitCount: { type: integer }
+        contributorCount: { type: integer }
+        dependencyCount: { type: integer }
+        dupGroupCount: { type: integer }
+
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required: [hits, total, truncated]
+      properties:
+        hits:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [fileId, path, language, size, linesTotal, matches]
+            properties:
+              fileId: { type: integer }
+              path: { type: string }
+              language: { type: string }
+              size: { type: integer }
+              linesTotal: { type: integer }
+              matches:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [line, text]
+                  properties:
+                    line: { type: integer }
+                    text: { type: string }
+        total: { type: integer }
+        truncated: { type: boolean }
+
+    Job:
+      type: object
+      additionalProperties: false
+      required: [id, repoId, kind, status, progress, current, total, message, error, createdAt, updatedAt, startedAt,
+        finishedAt]
+      properties:
+        id: { type: integer }
+        repoId: { type: integer }
+        kind: { type: string }
+        status:
+          type: string
+          enum: [queued, running, paused, cancelling, cancelled, completed, failed, interrupted]
+        progress: { type: number }
+        current: { type: integer }
+        total: { type: integer }
+        message: { type: string }
+        error: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+
+    Settings:
+      type: object
+      additionalProperties: false
+      required: [ignoreFolders, ignoreExtensions, maxFileSize, maxFileDepth, workerCount, maxSearchFiles, dupMinLines,
+        dupMinSimilarity, theme]
+      properties:
+        ignoreFolders: { type: array, items: { type: string } }
+        ignoreExtensions: { type: array, items: { type: string } }
+        maxFileSize: { type: integer }
+        maxFileDepth: { type: integer }
+        workerCount: { type: integer }
+        maxSearchFiles: { type: integer }
+        dupMinLines: { type: integer }
+        dupMinSimilarity: { type: number }
+        theme: { type: string, enum: [system, light, dark] }
+
+    BrowseResponse:
+      type: object
+      additionalProperties: false
+      required: [path, parent, isRepo, entries]
+      properties:
+        path: { type: string }
+        parent: { type: string }
+        isRepo: { type: boolean }
+        entries:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, path, isRepo]
+            properties:
+              name: { type: string }
+              path: { type: string }
+              isRepo: { type: boolean }
