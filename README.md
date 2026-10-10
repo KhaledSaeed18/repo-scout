@@ -155,6 +155,56 @@ on Linux); set `REPO_SCOUT_DB` to keep them elsewhere.
 To work on Repo Scout itself, `make dev` runs the API with a hot-reloading
 frontend at http://localhost:5173 and keeps its database in `data/`.
 
+## Use it in CI
+
+`repo-scout scan` analyzes a folder without a server and prints a report as
+text, JSON or [SARIF](https://sarifweb.azurewebsites.net/). Quality gates make
+it exit with status 1, so a pipeline can block on them:
+
+```sh
+repo-scout scan . \
+  --max-complexity 150 \
+  --max-duplicates 20 \
+  --fail-on cycles,hidden-coupling
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--format text\|json\|sarif` | Report format (default `text`) |
+| `--output file` | Write the report to a file instead of standard output |
+| `--top n` | How many hotspots, duplicates and hidden dependencies to list (default 10) |
+| `--max-complexity n` | Fail when any file's total complexity is above `n` |
+| `--max-duplicates n` | Fail when there are more than `n` duplicate groups |
+| `--fail-on cycles,hidden-coupling` | Fail on any circular dependency or hidden dependency |
+| `--quiet` | No progress on standard error |
+
+Exit codes: `0` passed, `1` a quality gate failed, `2` bad usage, `3` the scan
+failed. In GitHub Actions, the SARIF report shows findings in the code
+scanning tab and on pull requests:
+
+```yaml
+jobs:
+  repo-scout:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # hotspots, knowledge and coupling read the history
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest
+      - run: repo-scout scan . --format sarif --output repo-scout.sarif --fail-on cycles
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: repo-scout.sarif
+          category: repo-scout
+```
+
 ## Commands
 
 - `make dev`: backend + frontend together
@@ -186,6 +236,7 @@ repo-scout/
 │   ├── ws/                 # WebSocket hub + event bus
 │   ├── risk/               # hotspots and knowledge concentration
 │   ├── coupling/           # files that change together
+│   ├── report/             # CLI reports (text, JSON, SARIF) and quality gates
 │   ├── api/                # chi router, HTTP handlers, REST + WS endpoints
 │   ├── webui/              # the built frontend, embedded in release builds
 │   └── export/             # CSV/JSON exporters

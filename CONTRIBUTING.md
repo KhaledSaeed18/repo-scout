@@ -108,7 +108,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 
 | Package | Responsibility |
 | --- | --- |
-| `cmd/repo-scout` | Composition root: reads config, opens the database, wires dependencies, starts the server and worker pool. Keep it thin. |
+| `cmd/repo-scout` | Composition root and command line: `serve` wires dependencies and starts the server and worker pool; `scan` runs one analysis into a temporary database and writes a report. Keep it thin. |
 | `internal/config` | Environment config and user settings with defaults and validation |
 | `internal/database` | Opening the SQLite database, schema migrations, clearing and promoting scan results; settings store |
 | `internal/models` | GORM models shared by all packages |
@@ -122,6 +122,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 | `internal/gitanalytics` | Heatmaps, streaks, ownership, largest commits over stored history |
 | `internal/risk` | Hotspots (complexity times change frequency) and knowledge concentration |
 | `internal/coupling` | Change coupling: files that change together, and why |
+| `internal/report` | `repo-scout scan` reports in text, JSON and SARIF, and the quality gates |
 | `internal/deps` | Manifest parsers (npm, Go, Cargo, Maven, Composer, pip) |
 | `internal/architecture` | Import extraction and resolution, cycles (Tarjan), dead files, unused folders |
 | `internal/duplicates` | Shingle hashing and clustering of similar blocks |

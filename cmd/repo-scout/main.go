@@ -1,112 +1,60 @@
-// Command repo-scout runs the Repo Scout server: the API, the scan workers
-// and, in release builds, the web interface.
+// Command repo-scout runs Repo Scout. With no command, or with serve, it runs
+// the server: the API, the scan workers and, in release builds, the web
+// interface. scan analyzes one repository and prints a report, for scripts
+// and CI.
 package main
 
 import (
-	"context"
-	"errors"
-	"log"
-	"net/http"
+	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
-	"time"
-
-	"github.com/KhaledSaeed18/repo-scout/internal/analysis"
-	"github.com/KhaledSaeed18/repo-scout/internal/api"
-	"github.com/KhaledSaeed18/repo-scout/internal/config"
-	"github.com/KhaledSaeed18/repo-scout/internal/database"
-	"github.com/KhaledSaeed18/repo-scout/internal/jobs"
-	"github.com/KhaledSaeed18/repo-scout/internal/webui"
-	"github.com/KhaledSaeed18/repo-scout/internal/ws"
+	"strings"
 )
 
 // version is stamped at build time with -ldflags "-X main.version=...".
 var version = "dev"
 
+// Exit codes. Scripts and CI rely on them.
+const (
+	exitOK         = 0
+	exitGateFailed = 1 // scan: a quality gate failed
+	exitUsage      = 2 // bad command line
+	exitError      = 3 // the work itself failed
+)
+
+const usage = `Repo Scout: local-first analytics for any Git repository.
+
+Usage:
+  repo-scout [serve] [--addr host:port] [--db file]
+  repo-scout scan [flags] [path]
+  repo-scout version
+
+Run "repo-scout <command> -h" for a command's flags.
+`
+
 func main() {
-	cfg := config.FromEnv()
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
 
-	if dir := filepath.Dir(cfg.DBPath); dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Fatalf("create data dir: %v", err)
-		}
+// run dispatches to a command and returns the process exit code.
+func run(args []string, stdout, stderr io.Writer) int {
+	cmd := "serve"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		cmd, args = args[0], args[1:]
 	}
-	db, err := database.Open(cfg.DBPath)
-	if err != nil {
-		log.Fatalf("open database: %v", err)
-	}
-	if err := database.Migrate(db); err != nil {
-		log.Fatalf("migrate database: %v", err)
-	}
-	// Scans that stopped with the process left staged rows behind; they are
-	// re-queued and start over, so the partial results are dropped.
-	if err := database.ClearStagingData(db); err != nil {
-		log.Fatalf("clear unfinished scans: %v", err)
-	}
-
-	settings := database.NewSettingsStore(db)
-	hub := ws.New()
-
-	loadSettings := func() config.Settings {
-		st, err := settings.Load()
-		if err != nil {
-			return config.Defaults()
-		}
-		return st
-	}
-
-	runner := analysis.New(db)
-	mgr := jobs.New(db, runner, loadSettings, hub)
-
-	assets, err := webui.Assets()
-	if err != nil {
-		log.Fatalf("load interface: %v", err)
-	}
-	server := api.New(api.Deps{DB: db, Jobs: mgr, Hub: hub, Settings: settings, AllowedHosts: cfg.AllowedHosts, UI: assets})
-	srv := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: server.Router(),
-	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	done := make(chan struct{})
-	go func() {
-		log.Printf("repo-scout %s listening on http://%s", version, cfg.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("server error: %v", err)
-		}
-		close(done)
-	}()
-
-	workerErr := make(chan error, 1)
-	go func() {
-		workerErr <- mgr.Start(ctx)
-	}()
-
-	select {
-	case <-ctx.Done():
-		log.Printf("shutting down")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = srv.Shutdown(shutdownCtx)
-	case err := <-workerErr:
-		if err != nil {
-			log.Fatalf("worker pool: %v", err)
-		}
-	case <-done:
-	}
-
-	// Stop the worker pool and wait briefly for in-flight jobs to check in.
-	stop()
-	select {
-	case err := <-workerErr:
-		if err != nil && !errors.Is(err, context.Canceled) {
-			log.Printf("worker pool exit: %v", err)
-		}
-	case <-time.After(3 * time.Second):
+	switch cmd {
+	case "serve":
+		return serve(args, stderr)
+	case "scan":
+		return scan(args, stdout, stderr)
+	case "version":
+		_, _ = fmt.Fprintf(stdout, "repo-scout %s\n", version)
+		return exitOK
+	case "help":
+		_, _ = fmt.Fprint(stdout, usage)
+		return exitOK
+	default:
+		_, _ = fmt.Fprintf(stderr, "unknown command %q\n\n%s", cmd, usage)
+		return exitUsage
 	}
 }
