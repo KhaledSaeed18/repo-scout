@@ -105,7 +105,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 | --- | --- |
 | `cmd/api` | Composition root: reads config, opens the database, wires dependencies, starts the server and worker pool. Keep it thin. |
 | `internal/config` | Environment config and user settings with defaults and validation |
-| `internal/database` | Opening, migrating and clearing the SQLite database; settings store |
+| `internal/database` | Opening the SQLite database, schema migrations, clearing and promoting scan results; settings store |
 | `internal/models` | GORM models shared by all packages |
 | `internal/api` | HTTP handlers, middleware, JSON helpers, SVG and export endpoints |
 | `internal/jobs` | Persistent job queue, worker pool, pause, resume, cancel and crash recovery |
@@ -115,6 +115,8 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 | `internal/metrics` | Per-file complexity, function length, nesting, imports and exports |
 | `internal/gitrepo` | Wraps the `git` CLI: metadata, branches, tags, streamed history |
 | `internal/gitanalytics` | Heatmaps, streaks, ownership, largest commits over stored history |
+| `internal/risk` | Hotspots (complexity times change frequency) and knowledge concentration |
+| `internal/coupling` | Change coupling: files that change together, and why |
 | `internal/deps` | Manifest parsers (npm, Go, Cargo, Maven, Composer, pip) |
 | `internal/architecture` | Import extraction and resolution, cycles (Tarjan), dead files, unused folders |
 | `internal/duplicates` | Shingle hashing and clustering of similar blocks |
@@ -128,10 +130,13 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
    it) and asks `jobs.Manager.Enqueue` for a scan. A repository has at most one
    live scan; asking again returns the existing job.
 2. A worker claims the oldest queued job and calls `analysis.Runner.Run`, which
-   clears the repository's previous results and runs these stages in order:
-   **git metadata**, **file scan** (line counts and metrics per file),
-   **git history**, **dependencies**, **import graph**, **duplicates**, and
-   **content index** (SQLite FTS5).
+   runs these stages in order: **git metadata**, **file scan** (line counts
+   and metrics per file), **git history** (commits and the files each one
+   changed), **dependencies**, **import graph**, **change coupling**,
+   **duplicates**, and **content index** (SQLite FTS5). Results are written
+   under a staging ID and swapped in with one transaction when every stage
+   succeeds, along with a snapshot for the trend history; a failed or
+   cancelled scan leaves the previous results untouched.
 3. Stages report progress through the `jobs.Reporter` interface. The reporter
    throttles database writes and the manager broadcasts `job.progress` and
    `job.state_changed` events over the WebSocket. When the job ends the
@@ -150,9 +155,9 @@ frontend/src/
 ├── App.tsx           shell: sidebar, mobile menu, page error boundary
 ├── index.css         design tokens (light and dark)
 ├── pages/            Overview, Repositories, Settings,
-│   ├── history/      Activity, Commits, Contributors, Branches & tags
-│   ├── code/         Files, Search, Metrics, Duplicates
-│   └── structure/    Architecture, Dependencies
+│   ├── history/      Activity, Commits, Contributors, Knowledge, Branches & tags
+│   ├── code/         Files, Search, Metrics, Hotspots, Duplicates
+│   └── structure/    Architecture, Change coupling, Dependencies
 ├── components/       shared building blocks; ui/ holds shadcn primitives
 └── lib/              API client and hooks, WebSocket, types, pure helpers + tests
 ```
@@ -173,6 +178,12 @@ frontend/src/
   batches (`CreateInBatches`), aggregate in SQL rather than loading whole
   tables, and add indexes for columns you filter or sort on.
 - **Every analysis reports progress** through the job system.
+- **Schema changes.** New tables, columns and indexes go on the models in
+  `internal/models` and are added by `AutoMigrate`. Anything it cannot do
+  (backfills, renames, drops, type changes) is a new numbered migration in
+  `internal/database/migrations.go`. Never edit or renumber a shipped
+  migration. A database written by a newer build is refused rather than
+  downgraded.
 - **SQL:** user text in `LIKE` must be escaped (see `escapeLike`), paged
   queries need a unique tie-breaker in `ORDER BY`, and new queries should be
   scoped by `repo_id`.

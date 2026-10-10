@@ -46,6 +46,9 @@ Frontend commands run with `pnpm --prefix frontend run ...`.
   system and broadcast via the WebSocket hub.
 - Big scans must stay memory-bounded: stream, batch-insert, and index.
 - SQLite: batched inserts during scans; indexes on hot query columns.
+- Schema: additive changes on the models (AutoMigrate); everything else is a
+  new numbered migration in `internal/database/migrations.go`. Never edit a
+  shipped migration.
 - No placeholder UI, no unfinished pages, no dead exports.
 - TypeScript: strict mode, shared types generated alongside the API contracts
   in `frontend/src/lib/types.ts`.

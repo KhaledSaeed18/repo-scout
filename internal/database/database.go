@@ -70,7 +70,8 @@ func Open(path string) (*gorm.DB, error) {
 	return db, nil
 }
 
-// Migrate creates all tables, indexes, and the FTS5 content-search table.
+// Migrate creates all tables, indexes, and the FTS5 content-search table,
+// then applies any pending numbered migrations (see migrations.go).
 func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&models.Repository{},
@@ -95,7 +96,7 @@ func Migrate(db *gorm.DB) error {
 	if err := ensureFileFTS(db); err != nil {
 		return err
 	}
-	return nil
+	return applyMigrations(db, migrations())
 }
 
 // ensureFileFTS creates the FTS5 table that backs content search. rowid maps
