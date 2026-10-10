@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/KhaledSaeed18/repo-scout/internal/analysis"
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
@@ -483,5 +487,99 @@ func TestAddingAMissingFolderIsRejected(t *testing.T) {
 		if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("%s: expected 400, got %d", p, resp.StatusCode)
 		}
+	}
+}
+
+func postJSON(t *testing.T, ts *httptest.Server, path, body string) (*http.Response, map[string]any) {
+	t.Helper()
+	resp, err := http.Post(ts.URL+path, "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	var out map[string]any
+	_ = json.NewDecoder(resp.Body).Decode(&out)
+	return resp, out
+}
+
+func TestHistoryEndpoints(t *testing.T) {
+	ts, _ := newTestServer(t)
+
+	_, body := get(t, ts, "/api/repositories/1/branches")
+	branches := body["branches"].([]any)
+	if len(branches) != 1 || branches[0].(map[string]any)["name"] != "main" {
+		t.Fatalf("expected the main branch, got %v", body)
+	}
+	_, body = get(t, ts, "/api/repositories/1/tags")
+	if tags, ok := body["tags"].([]any); !ok || len(tags) != 0 {
+		t.Fatalf("expected an empty tag list, got %v", body)
+	}
+	_, body = get(t, ts, "/api/repositories/1/largest-commits")
+	if commits := body["commits"].([]any); len(commits) != 1 || commits[0].(map[string]any)["message"] != "initial commit" {
+		t.Fatalf("unexpected largest commits %v", body)
+	}
+	_, body = get(t, ts, "/api/repositories/1/ownership")
+	owners := body["byAuthor"].([]any)
+	if body["total"].(float64) != 3 || len(owners) != 1 || owners[0].(map[string]any)["email"] != "test@example.com" {
+		t.Fatalf("unexpected ownership %v", body)
+	}
+}
+
+func TestJobActions(t *testing.T) {
+	ts, _ := newTestServer(t)
+	_, repo := get(t, ts, "/api/repositories/1")
+	resp, body := postJSON(t, ts, "/api/repositories", `{"path":`+strconv.Quote(repo["path"].(string))+`}`)
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("enqueue: %d %v", resp.StatusCode, body)
+	}
+	jobID := int(body["job"].(map[string]any)["id"].(float64))
+	cancel := fmt.Sprintf("/api/jobs/%d/cancel", jobID)
+
+	if resp, _ := postJSON(t, ts, cancel, `{}`); resp.StatusCode != http.StatusOK {
+		t.Fatalf("cancel queued job: %d", resp.StatusCode)
+	}
+	if resp, _ := postJSON(t, ts, cancel, `{}`); resp.StatusCode != http.StatusConflict {
+		t.Fatalf("cancelling twice should conflict, got %d", resp.StatusCode)
+	}
+	for _, path := range []string{"/api/jobs/999/pause", "/api/jobs/999/resume"} {
+		if resp, _ := postJSON(t, ts, path, `{}`); resp.StatusCode != http.StatusConflict {
+			t.Errorf("%s: expected 409, got %d", path, resp.StatusCode)
+		}
+	}
+	if resp, _ := postJSON(t, ts, "/api/jobs/abc/pause", `{}`); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for a malformed id, got %d", resp.StatusCode)
+	}
+	_, body = get(t, ts, "/api/jobs")
+	jobs := body["jobs"].([]any)
+	if len(jobs) == 0 || jobs[0].(map[string]any)["status"] != "cancelled" {
+		t.Fatalf("expected the cancelled job listed first, got %v", body)
+	}
+}
+
+func TestWebSocketReceivesJobEvents(t *testing.T) {
+	ts, _ := newTestServer(t)
+	url := "ws" + strings.TrimPrefix(ts.URL, "http") + "/api/ws"
+	conn, _, err := websocket.DefaultDialer.Dial(url, http.Header{"Origin": []string{ts.URL}})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	_, repo := get(t, ts, "/api/repositories/1")
+	if resp, _ := postJSON(t, ts, "/api/repositories", `{"path":`+strconv.Quote(repo["path"].(string))+`}`); resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("enqueue: %d", resp.StatusCode)
+	}
+	if err := conn.SetReadDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	var ev struct {
+		Type string         `json:"type"`
+		Data map[string]any `json:"data"`
+	}
+	if err := conn.ReadJSON(&ev); err != nil {
+		t.Fatalf("read event: %v", err)
+	}
+	if !strings.HasPrefix(ev.Type, "job.") || ev.Data["job"] == nil {
+		t.Fatalf("expected a job event, got %+v", ev)
 	}
 }
