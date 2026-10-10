@@ -9,7 +9,7 @@
 # Then scan folders under /repos from http://localhost:8080.
 
 # The interface is platform independent; build it once on the build machine.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS ui
+FROM --platform=$BUILDPLATFORM node:25-alpine AS ui
 WORKDIR /src/frontend
 RUN corepack enable
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
