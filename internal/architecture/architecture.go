@@ -437,13 +437,19 @@ func deadFiles(fileSet, dirSet map[string]bool, entries []string, edges map[stri
 }
 
 // buildFolderGraph aggregates file-level edges into a folder-level graph.
-// Targets that are directories become their own node.
+// Targets that are directories become their own node. Imports from Go test
+// files are left out: Go builds tests apart from the package, so an external
+// test package importing its importer is not a cycle, and a package only
+// tests import is still unused by the program.
 func buildFolderGraph(edges []Edge, dirSet map[string]bool) map[string][]string {
 	graph := map[string][]string{}
 	add := func(from, to string) {
 		graph[from] = append(graph[from], to)
 	}
 	for _, e := range edges {
+		if strings.HasSuffix(e.From, "_test.go") {
+			continue
+		}
 		fromDir := folderOf(e.From)
 		to := e.To
 		if !dirSet[to] {

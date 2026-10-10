@@ -99,6 +99,33 @@ func TestCircularDependency(t *testing.T) {
 	}
 }
 
+func TestGoTestImportsAreNotCycles(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "go.mod", "module example.com/demo\n")
+	write(t, root, "a/a.go", "package a\nimport \"example.com/demo/b\"\n")
+	write(t, root, "b/b.go", "package b\n")
+	// An external test package may import a package that imports its own.
+	write(t, root, "b/b_test.go", "package b_test\nimport \"example.com/demo/a\"\n")
+	write(t, root, "main.go", "package main\nimport \"example.com/demo/a\"\nfunc main(){}\n")
+
+	rep, err := Build(root, fileList(root), readAll(root))
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if len(rep.Cycles) != 0 {
+		t.Fatalf("expected no cycles from test imports, got %+v", rep.Cycles)
+	}
+	found := false
+	for _, e := range rep.Edges {
+		if e.From == "b/b_test.go" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected the test import to stay in the edge list")
+	}
+}
+
 func TestDeadFiles(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "main.go", "package main\n")
