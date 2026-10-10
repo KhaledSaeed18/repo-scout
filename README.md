@@ -107,13 +107,16 @@ progress over the WebSocket hub as it goes:
 2. **file scan**: walk the tree, apply ignore rules and size limits, count
    lines per language, and measure complexity, function length and nesting
    per file with a worker pool
-3. **git history**: commits on branches, tags and remotes, authors and their
-   time zones, contributor rollups and per-file ownership
+3. **git history**: commits on branches, tags and remotes streamed in
+   batches, the files each commit changed (following renames), authors and
+   their time zones, contributor rollups and per-file ownership
 4. **dependencies**: parse manifests per ecosystem
 5. **import graph**: resolve imports, detect cycles (Tarjan SCC), flag
    unused folders and possibly dead files
-6. **duplicates**: shingle-hash normalized lines, cluster similar blocks
-7. **content index**: populate SQLite FTS5 for instant search
+6. **change coupling**: pair files that keep changing in the same commits,
+   skipping sweeping commits, and keep the strongest pairs
+7. **duplicates**: shingle-hash normalized lines, cluster similar blocks
+8. **content index**: populate SQLite FTS5 for instant search
 
 Heatmaps, streaks and metric rollups are computed from the stored results
 when a page asks for them. Jobs are queued, run through a worker pool, and

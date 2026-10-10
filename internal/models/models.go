@@ -172,6 +172,18 @@ type ImportEdge struct {
 	Resolved   bool   `json:"resolved"`
 }
 
+// FileCoupling is two files that keep changing in the same commits.
+type FileCoupling struct {
+	ID         uint    `gorm:"primaryKey" json:"id"`
+	RepoID     uint    `gorm:"index:idx_coupling_repo_a;index:idx_coupling_repo_b" json:"repoId"`
+	FileA      string  `gorm:"index:idx_coupling_repo_a" json:"fileA"`
+	FileB      string  `gorm:"index:idx_coupling_repo_b" json:"fileB"`
+	Shared     int     `json:"shared"`
+	RevisionsA int     `json:"revisionsA"`
+	RevisionsB int     `json:"revisionsB"`
+	Degree     float64 `json:"degree"`
+}
+
 // DuplicateGroup is a set of similar code blocks across files.
 type DuplicateGroup struct {
 	ID         uint    `gorm:"primaryKey" json:"id"`

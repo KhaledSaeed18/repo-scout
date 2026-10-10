@@ -83,6 +83,7 @@ func Migrate(db *gorm.DB) error {
 		&models.FileOwnership{},
 		&models.Dependency{},
 		&models.ImportEdge{},
+		&models.FileCoupling{},
 		&models.DuplicateGroup{},
 		&models.DuplicateBlock{},
 		&models.Job{},
@@ -133,6 +134,7 @@ func repoTables() []any {
 		&models.FileOwnership{},
 		&models.Dependency{},
 		&models.ImportEdge{},
+		&models.FileCoupling{},
 		&models.DuplicateGroup{},
 		&models.DuplicateBlock{},
 	}

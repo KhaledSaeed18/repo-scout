@@ -13,6 +13,7 @@ import (
 
 	"github.com/KhaledSaeed18/repo-scout/internal/architecture"
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
+	"github.com/KhaledSaeed18/repo-scout/internal/coupling"
 	"github.com/KhaledSaeed18/repo-scout/internal/database"
 	"github.com/KhaledSaeed18/repo-scout/internal/deps"
 	"github.com/KhaledSaeed18/repo-scout/internal/duplicates"
@@ -24,7 +25,7 @@ import (
 )
 
 // stageCount is the number of pipeline stages (used for progress mapping).
-const stageCount = 7
+const stageCount = 8
 
 // Runner executes repository scans. It implements jobs.Runner.
 type Runner struct {
@@ -77,6 +78,7 @@ func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter,
 		{"git history", func() error { return r.gitHistory(ctx, &work, rep, read) }},
 		{"dependencies", func() error { return r.dependencies(ctx, &work, read) }},
 		{"import graph", func() error { return r.importGraph(ctx, &work, read) }},
+		{"change coupling", func() error { return coupling.Compute(r.db, work.ID) }},
 		{"duplicates", func() error { return r.duplicates(ctx, &work, settings, read) }},
 		{"content index", func() error { return r.contentIndex(ctx, &work, read) }},
 	}
