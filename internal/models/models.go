@@ -204,6 +204,23 @@ type DuplicateBlock struct {
 	EndLine   int    `json:"endLine"`
 }
 
+// ScanSnapshot is the summary of one successful scan. Snapshots outlive
+// rescans so the repository's trends can be drawn.
+type ScanSnapshot struct {
+	ID               uint      `gorm:"primaryKey" json:"id"`
+	RepoID           uint      `gorm:"index:idx_snapshot_repo_time" json:"repoId"`
+	ScannedAt        time.Time `gorm:"index:idx_snapshot_repo_time" json:"scannedAt"`
+	HeadCommit       string    `json:"headCommit"`
+	FileCount        int       `json:"fileCount"`
+	TotalCode        int       `json:"totalCode"`
+	Complexity       int       `json:"complexity"`
+	Functions        int       `json:"functions"`
+	CommitCount      int       `json:"commitCount"`
+	ContributorCount int       `json:"contributorCount"`
+	DependencyCount  int       `json:"dependencyCount"`
+	DupGroupCount    int       `json:"dupGroupCount"`
+}
+
 // Job is a background work item. State is persisted for crash recovery.
 type Job struct {
 	ID         uint       `gorm:"primaryKey" json:"id"`

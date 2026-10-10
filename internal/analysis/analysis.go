@@ -110,6 +110,11 @@ func (r *Runner) promote(repo, work *models.Repository) error {
 	summary["status"] = models.RepoReady
 	summary["last_scanned_at"] = now
 	summary["updated_at"] = now
+	snapshot, err := r.snapshot(work, summary, now)
+	if err != nil {
+		return err
+	}
+	snapshot.RepoID = repo.ID
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&models.Repository{}).Where("id = ?", repo.ID).Updates(summary)
 		if res.Error != nil {
@@ -118,8 +123,48 @@ func (r *Runner) promote(repo, work *models.Repository) error {
 		if res.RowsAffected == 0 {
 			return fmt.Errorf("repository %d was removed during the scan", repo.ID)
 		}
-		return database.PromoteRepoData(tx, work.ID, repo.ID)
+		if err := database.PromoteRepoData(tx, work.ID, repo.ID); err != nil {
+			return err
+		}
+		if err := tx.Create(&snapshot).Error; err != nil {
+			return fmt.Errorf("save snapshot: %w", err)
+		}
+		return nil
 	})
+}
+
+// snapshot records the scan's headline numbers for the trend history.
+func (r *Runner) snapshot(work *models.Repository, summary map[string]any, at time.Time) (models.ScanSnapshot, error) {
+	var totals struct {
+		Complexity int
+		Functions  int
+	}
+	if err := r.db.Model(&models.File{}).Where("repo_id = ?", work.ID).
+		Select("COALESCE(SUM(complexity), 0) AS complexity, COALESCE(SUM(func_count), 0) AS functions").
+		Scan(&totals).Error; err != nil {
+		return models.ScanSnapshot{}, fmt.Errorf("snapshot totals: %w", err)
+	}
+	count := func(col string) int {
+		switch v := summary[col].(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		}
+		return 0
+	}
+	return models.ScanSnapshot{
+		ScannedAt:        at,
+		HeadCommit:       work.HeadCommit,
+		FileCount:        count("file_count"),
+		TotalCode:        count("total_code"),
+		Complexity:       totals.Complexity,
+		Functions:        totals.Functions,
+		CommitCount:      count("commit_count"),
+		ContributorCount: count("contributor_count"),
+		DependencyCount:  count("dependency_count"),
+		DupGroupCount:    count("dup_group_count"),
+	}, nil
 }
 
 // abandon drops a failed scan's staged rows and puts the repository back to

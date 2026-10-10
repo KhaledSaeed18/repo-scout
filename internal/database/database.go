@@ -87,6 +87,7 @@ func Migrate(db *gorm.DB) error {
 		&models.DuplicateGroup{},
 		&models.DuplicateBlock{},
 		&models.Job{},
+		&models.ScanSnapshot{},
 		&models.Setting{},
 	); err != nil {
 		return fmt.Errorf("auto migrate: %w", err)

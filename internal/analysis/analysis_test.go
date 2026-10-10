@@ -224,6 +224,46 @@ func TestFailedRescanKeepsPreviousResults(t *testing.T) {
 	if staged != 0 {
 		t.Fatalf("expected staged rows dropped, got %d", staged)
 	}
+	var snapshots int64
+	db.Model(&models.ScanSnapshot{}).Where("repo_id = ?", repo.ID).Count(&snapshots)
+	if snapshots != 1 {
+		t.Fatalf("expected only the successful scan snapshotted, got %d", snapshots)
+	}
+}
+
+func TestEveryScanAddsASnapshot(t *testing.T) {
+	db := testDB(t)
+	root := makeFixture(t)
+	repo := models.Repository{Name: "demo", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	r := New(db)
+	if err := r.Run(context.Background(), repo.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("first scan: %v", err)
+	}
+	write(t, root, "pkg/extra/extra.go", "package extra\n\nfunc E(a int) int {\n\tif a > 0 {\n\t\treturn a\n\t}\n\treturn 0\n}\n")
+	git(t, root, "add", ".")
+	git(t, root, "commit", "-qm", "extra")
+	if err := r.Run(context.Background(), repo.ID, 2, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("second scan: %v", err)
+	}
+
+	var snaps []models.ScanSnapshot
+	db.Where("repo_id = ?", repo.ID).Order("id").Find(&snaps)
+	if len(snaps) != 2 {
+		t.Fatalf("expected 2 snapshots, got %d", len(snaps))
+	}
+	first, second := snaps[0], snaps[1]
+	if first.FileCount != 5 || second.FileCount != 6 {
+		t.Fatalf("expected 5 then 6 files, got %d and %d", first.FileCount, second.FileCount)
+	}
+	if second.CommitCount != first.CommitCount+1 || second.Complexity <= first.Complexity || second.Functions != first.Functions+1 {
+		t.Fatalf("expected growth between scans, got %+v then %+v", first, second)
+	}
+	if second.HeadCommit == "" || second.HeadCommit == first.HeadCommit {
+		t.Fatalf("expected a new head commit, got %q then %q", first.HeadCommit, second.HeadCommit)
+	}
 }
 
 // cancelledReporter fails every checkpoint the way a cancelled job does.

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"time"
 
@@ -239,4 +240,21 @@ func (s *Server) handleSVG(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=architecture-%d.svg", id))
 	_, _ = w.Write([]byte(svg))
+}
+
+// handleTrends returns the summaries of the latest scans, oldest first.
+func (s *Server) handleTrends(w http.ResponseWriter, r *http.Request) {
+	id, ok := parseID(w, r)
+	if !ok {
+		return
+	}
+	limit := max(queryInt(r, "limit", 50, 500), 1)
+	snapshots := []models.ScanSnapshot{}
+	if err := s.db.Where("repo_id = ?", id).Order("scanned_at DESC, id DESC").Limit(limit).
+		Find(&snapshots).Error; err != nil {
+		writeErr(w, http.StatusInternalServerError, "trends: "+err.Error())
+		return
+	}
+	slices.Reverse(snapshots)
+	writeJSON(w, http.StatusOK, map[string]any{"snapshots": snapshots})
 }

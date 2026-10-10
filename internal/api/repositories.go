@@ -85,6 +85,9 @@ func (s *Server) handleDeleteRepo(w http.ResponseWriter, r *http.Request) {
 		if err := tx.Where("repo_id = ?", id).Delete(&models.Job{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("repo_id = ?", id).Delete(&models.ScanSnapshot{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&models.Repository{}, id).Error
 	})
 	if err != nil {
