@@ -376,3 +376,19 @@ export interface CouplingPair {
 }
 
 export type CouplingLink = '' | 'import' | 'package' | 'test' | 'lockfile'
+
+/** Headline numbers of one successful scan. */
+export interface ScanSnapshot {
+  id: number
+  repoId: number
+  scannedAt: string
+  headCommit: string
+  fileCount: number
+  totalCode: number
+  complexity: number
+  functions: number
+  commitCount: number
+  contributorCount: number
+  dependencyCount: number
+  dupGroupCount: number
+}

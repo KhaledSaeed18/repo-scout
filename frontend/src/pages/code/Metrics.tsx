@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
 import Meter from '@/components/Meter'
 import RequireRepo from '@/components/RequireRepo'
+import Sparkline from '@/components/Sparkline'
 import { PageHeader, Section } from '@/components/layout'
 import { QueryView } from '@/components/states'
-import { useMetrics } from '@/lib/api'
-import { formatCompact, formatNumber, formatPercent } from '@/lib/format'
+import { useMetrics, useTrends } from '@/lib/api'
+import { formatCompact, formatDate, formatNumber, formatPercent, shortHash } from '@/lib/format'
 import { colorOf, rankLanguages } from '@/lib/languages'
-import type { FileEntry, Metrics, Repository } from '@/lib/types'
+import { describeChange } from '@/lib/trend'
+import type { FileEntry, Metrics, Repository, ScanSnapshot } from '@/lib/types'
 
 function Figure({ value, label, detail }: { value: string; label: string; detail?: string }) {
   return (
@@ -126,6 +128,93 @@ function Ranked({
   )
 }
 
+const trendMeasures: { key: keyof ScanSnapshot; label: string }[] = [
+  { key: 'totalCode', label: 'Lines of code' },
+  { key: 'complexity', label: 'Total complexity' },
+  { key: 'functions', label: 'Functions' },
+  { key: 'fileCount', label: 'Files' },
+  { key: 'dupGroupCount', label: 'Duplicate blocks' },
+  { key: 'dependencyCount', label: 'Dependencies' },
+]
+
+function TrendTile({ snapshots, measure }: { snapshots: ScanSnapshot[]; measure: (typeof trendMeasures)[number] }) {
+  const values = snapshots.map((s) => Number(s[measure.key]))
+  const current = values[values.length - 1]
+  return (
+    <div className="flex min-w-0 flex-col gap-1 border-b py-3">
+      <span className="text-sm text-muted-foreground">{measure.label}</span>
+      <span className="font-heading text-2xl leading-none font-semibold tabular-nums" title={formatNumber(current)}>
+        {formatCompact(current)}
+      </span>
+      <span className="text-xs text-muted-foreground tabular-nums">{describeChange(values)}</span>
+      <div className="mt-2">
+        <Sparkline
+          name={measure.label}
+          values={values}
+          label={(i) => `${formatDate(snapshots[i].scannedAt)}: ${formatNumber(values[i])}`}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ScanTable({ snapshots }: { snapshots: ScanSnapshot[] }) {
+  return (
+    <Table className="mt-6">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Scanned</TableHead>
+          <TableHead>Head commit</TableHead>
+          {trendMeasures.map((m) => (
+            <TableHead key={m.key} className="text-right">
+              {m.label}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {[...snapshots].reverse().map((s) => (
+          <TableRow key={s.id}>
+            <TableCell className="whitespace-nowrap">{formatDate(s.scannedAt)}</TableCell>
+            <TableCell className="font-mono text-[0.8125rem]">{s.headCommit ? shortHash(s.headCommit) : 'None'}</TableCell>
+            {trendMeasures.map((m) => (
+              <TableCell key={m.key} className="text-right">
+                {formatNumber(Number(s[m.key]))}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function Trends({ repoId }: { repoId: number }) {
+  const q = useTrends(repoId)
+  return (
+    <Section title="Over time" description="Each successful scan is kept, so scanning again after changes shows how the code is moving.">
+      <QueryView query={q} label="scan history">
+        {({ snapshots }) =>
+          snapshots.length < 2 ? (
+            <p className="text-sm text-muted-foreground">
+              Only one scan so far. Scan again after the code changes to see trends here.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
+                {trendMeasures.map((m) => (
+                  <TrendTile key={m.key} snapshots={snapshots} measure={m} />
+                ))}
+              </div>
+              <ScanTable snapshots={snapshots} />
+            </>
+          )
+        }
+      </QueryView>
+    </Section>
+  )
+}
+
 function MetricsPage({ repo }: { repo: Repository }) {
   const q = useMetrics(repo.id, 20)
   return (
@@ -139,6 +228,7 @@ function MetricsPage({ repo }: { repo: Repository }) {
           <>
             <Totals m={m} />
             <Languages m={m} />
+            <Trends repoId={repo.id} />
             <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 [&>section]:mt-0">
               <Ranked title="Largest files" description="By lines of code." files={m.largestFiles} value={(f) => f.linesCode} unit="lines" />
               <Ranked

@@ -96,7 +96,8 @@ the graph's detail level, and inspect the architecture findings.
 - Change coupling: files that change together, with hidden dependencies
   (no import, shared package, test or lockfile to explain them) called out
 - Metrics: cyclomatic complexity, function length, nesting, imports/exports,
-  largest and most complex files
+  largest and most complex files, and how each headline number moved across past
+  scans
 - Background jobs with pause / resume / cancel, queue, worker pool, progress,
   and crash recovery
 - Live WebSocket updates

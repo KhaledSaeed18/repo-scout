@@ -18,6 +18,7 @@ import type {
   Ownership,
   RepoListResponse,
   Repository,
+  ScanSnapshot,
   SearchResult,
   Settings,
   Tag,
@@ -92,6 +93,7 @@ export const api = {
     if (params.limit) qs.set('limit', String(params.limit))
     return get<{ pairs: CouplingPair[] }>(`/api/repositories/${id}/coupling?${qs}`)
   },
+  trends: (id: number) => get<{ snapshots: ScanSnapshot[] }>(`/api/repositories/${id}/trends`),
   knowledge: (id: number, depth: number, inactiveMonths: number) =>
     get<KnowledgeReport>(`/api/repositories/${id}/knowledge?depth=${depth}&inactiveMonths=${inactiveMonths}`),
   search: (params: Record<string, string | number | boolean>) => {
@@ -248,6 +250,13 @@ export const useCoupling = (id: number, params: { path?: string; hidden?: boolea
     queryFn: () => api.coupling(id, params),
     enabled: id > 0,
     placeholderData: keepPreviousData,
+  })
+
+export const useTrends = (id: number) =>
+  useQuery({
+    queryKey: ['trends', id],
+    queryFn: () => api.trends(id),
+    enabled: id > 0,
   })
 
 export interface SearchParams {
