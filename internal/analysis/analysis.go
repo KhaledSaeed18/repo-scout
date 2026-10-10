@@ -54,6 +54,12 @@ func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter,
 	if err := r.db.Model(&repo).Update("status", models.RepoScanning).Error; err != nil {
 		return err
 	}
+	// A folder removed since it was added must fail the scan, not replace
+	// the results with an empty repository.
+	if info, err := os.Stat(repo.Path); err != nil || !info.IsDir() {
+		r.abandon(&repo)
+		return fmt.Errorf("no folder at %s", repo.Path)
+	}
 	// work is the repository as the stages see it: same folder, staging ID.
 	work := repo
 	work.ID = database.StagingID(repo.ID)

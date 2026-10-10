@@ -328,3 +328,28 @@ func TestDuplicateBlocksReferenceStoredGroups(t *testing.T) {
 		}
 	}
 }
+
+func TestScanOfARemovedFolderFails(t *testing.T) {
+	db := testDB(t)
+	root := makeFixture(t)
+	repo := models.Repository{Name: "demo", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	r := New(db)
+	if err := r.Run(context.Background(), repo.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("first scan: %v", err)
+	}
+	if err := os.RemoveAll(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Run(context.Background(), repo.ID, 2, &reporter{}, config.Defaults()); err == nil {
+		t.Fatal("expected the scan of a removed folder to fail")
+	}
+	db.First(&repo, repo.ID)
+	var files int64
+	db.Model(&models.File{}).Where("repo_id = ?", repo.ID).Count(&files)
+	if repo.Status != models.RepoReady || files != 5 {
+		t.Fatalf("expected the previous results kept and the repo ready, got %s with %d files", repo.Status, files)
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -466,3 +467,21 @@ func TestRejectsUnknownHosts(t *testing.T) {
 	}
 }
 
+func TestAddingAMissingFolderIsRejected(t *testing.T) {
+	ts, _ := newTestServer(t)
+	file := filepath.Join(t.TempDir(), "file.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"/definitely/not/here", file} {
+		body := strings.NewReader(`{"path":` + strconv.Quote(p) + `}`)
+		resp, err := http.Post(ts.URL+"/api/repositories", "application/json", body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("%s: expected 400, got %d", p, resp.StatusCode)
+		}
+	}
+}

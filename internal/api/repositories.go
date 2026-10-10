@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -31,6 +32,10 @@ func (s *Server) handleCreateRepo(w http.ResponseWriter, r *http.Request) {
 	abs, err := filepath.Abs(req.Path)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	if info, err := os.Stat(abs); err != nil || !info.IsDir() {
+		writeErr(w, http.StatusBadRequest, "no folder at "+abs)
 		return
 	}
 	repo := models.Repository{Name: filepath.Base(abs), Path: abs}
