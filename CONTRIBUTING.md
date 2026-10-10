@@ -17,6 +17,7 @@ issues.
 - [Testing and checks](#testing-and-checks)
 - [Common changes, step by step](#common-changes-step-by-step)
 - [Commits and pull requests](#commits-and-pull-requests)
+- [Releases](#releases)
 
 ## Ways to help
 
@@ -341,3 +342,24 @@ stays a clean sequence of conventional commits.
 
 By contributing, you agree that your contributions are licensed under the
 project's [MIT License](LICENSE).
+
+## Releases
+
+Releases are cut by the maintainer from `main` by pushing a semantic version
+tag:
+
+```sh
+git tag -a v1.2.0 -m "v1.2.0"
+git push origin v1.2.0
+```
+
+`.github/workflows/release.yml` then runs the tests, builds binaries for
+macOS, Linux and Windows (amd64 and arm64) with GoReleaser
+(`.goreleaser.yaml`), publishes them with checksums and a changelog grouped
+from the conventional commits, pushes a multi-platform image to
+`ghcr.io/khaledsaeed18/repo-scout`, and attests the provenance of every
+artifact. Tags with a suffix such as `v1.2.0-rc.1` are published as
+prereleases and do not move the `latest` image.
+
+To try the release build locally: `goreleaser release --snapshot --clean`, or
+`docker build -t repo-scout .` for the image.

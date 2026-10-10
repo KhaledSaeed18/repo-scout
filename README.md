@@ -139,6 +139,25 @@ or failed rescan leaves the previous results untouched.
 - `git` on PATH (used for history analysis)
 - Make
 
+## Install
+
+- **Download a binary** for macOS, Linux or Windows from the
+  [releases page](https://github.com/KhaledSaeed18/repo-scout/releases), unpack
+  it and run `./repo-scout`. Each archive carries a signed build provenance:
+  `gh attestation verify <archive> --repo KhaledSaeed18/repo-scout`.
+- **Run the container**, mounting the folders to scan read-only:
+
+  ```sh
+  docker run --rm -p 127.0.0.1:8080:8080 \
+    -v repo-scout-data:/data -v "$HOME/code:/repos:ro" \
+    ghcr.io/khaledsaeed18/repo-scout
+  ```
+
+  Then add folders under `/repos` from http://localhost:8080. Publish the port
+  on `127.0.0.1` as shown; the API has no authentication.
+- **Install the command line only** (no interface, for CI):
+  `go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest`.
+
 ## Quick start
 
 Build a single binary with the interface built in, then run it:

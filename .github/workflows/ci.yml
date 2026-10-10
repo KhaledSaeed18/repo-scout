@@ -29,7 +29,7 @@ jobs:
 
       - name: Check gofmt
         run: |
-          unformatted="$(gofmt -l $(find . -name '*.go' -not -path './frontend/*'))"
+          unformatted="$(find . -name '*.go' -not -path './frontend/*' -exec gofmt -l {} +)"
           if [ -n "$unformatted" ]; then
             echo "The following files are not gofmt'ed:"
             echo "$unformatted"
@@ -130,7 +130,7 @@ jobs:
       - name: Serve the interface
         run: |
           REPO_SCOUT_DB="$RUNNER_TEMP/smoke.db" ./bin/repo-scout &
-          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 0.5; done
+          for _ in $(seq 1 20); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 0.5; done
           curl -fs http://127.0.0.1:8080/ | grep -q '<div id="root">'
           curl -fs http://127.0.0.1:8080/hotspots | grep -q '<div id="root">'
 

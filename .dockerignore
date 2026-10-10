@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+.cache
+bin
+data
+docs
+brand
+**/node_modules
+frontend/dist
+internal/webui/dist
+*.db
+*.db-*

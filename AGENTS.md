@@ -88,6 +88,8 @@ Outside contributors work in forks and open pull requests, as described in
 - Everything to `main` directly. No branches, no PRs.
 - Push when a feature/unit of work completes.
 - Never rewrite pushed history. Never force-push.
+- Releases are `vX.Y.Z` tags pushed by the maintainer only; the release
+  workflow builds and publishes everything. Never tag without being asked.
 - No co-author trailers, no "Generated with", no mention of AI or tools as
   authors. The human is the sole author of record.
 

@@ -1,0 +1,73 @@
+# Builds release archives for every platform from a version tag.
+# Run by .github/workflows/release.yml; try it locally with
+#   goreleaser release --snapshot --clean
+version: 2
+
+project_name: repo-scout
+
+before:
+  hooks:
+    # Builds the frontend and stages it in internal/webui/dist for embedding.
+    - make ui
+
+builds:
+  - id: repo-scout
+    main: ./cmd/repo-scout
+    binary: repo-scout
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    tags: [embedui]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: repo-scout
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - SECURITY.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Performance
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+    - title: Other changes
+      order: 999
+  filters:
+    exclude:
+      - '^docs'
+      - '^test'
+      - '^chore'
+      - '^ci'
+      - '^style'
+
+release:
+  draft: false
+  prerelease: auto
+  footer: |
+    Verify a download came from this repository's release workflow:
+
+        gh attestation verify repo-scout_{{ .Version }}_linux_amd64.tar.gz --repo {{ .Env.GITHUB_REPOSITORY }}
+
+    Container image: `ghcr.io/{{ tolower .Env.GITHUB_REPOSITORY }}:{{ .Version }}`

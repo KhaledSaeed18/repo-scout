@@ -2,8 +2,13 @@
 
 ## Supported versions
 
-Repo Scout has no tagged releases yet. Security fixes land on `main`; please
-make sure an issue still reproduces there before reporting it.
+Security fixes land on `main` and ship in the next release. Only the latest
+release is supported; please make sure an issue still reproduces there or on
+`main` before reporting it.
+
+Release archives and container images carry build provenance signed by the
+release workflow. Check a download with
+`gh attestation verify <file> --repo KhaledSaeed18/repo-scout`.
 
 ## Reporting a vulnerability
 
