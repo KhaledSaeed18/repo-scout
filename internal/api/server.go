@@ -65,6 +65,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/{id}/duplicates", s.handleDuplicates)
 		r.Get("/{id}/architecture", s.handleArchitecture)
 		r.Get("/{id}/metrics", s.handleMetrics)
+		r.Get("/{id}/hotspots", s.handleHotspots)
+		r.Get("/{id}/knowledge", s.handleKnowledge)
 		r.Get("/{id}/svg", s.handleSVG)
 		r.Get("/{id}/export", s.handleExport)
 	})

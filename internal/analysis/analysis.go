@@ -283,8 +283,9 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 }
 
 // fileOwnership stores, for every scanned file with history, the author who
-// made the most of its commits and their share. It runs in SQL so it stays
-// flat in memory however long the history is.
+// made the most of its commits and their share. Bots such as dependabot[bot]
+// are left out: they touch files but hold no knowledge of them. It runs in
+// SQL so it stays flat in memory however long the history is.
 func (r *Runner) fileOwnership(repoID uint) error {
 	err := r.db.Exec(`INSERT INTO file_ownerships (repo_id, path, author, email, commits, share)
 		SELECT repo_id, path, author, email, commits, share FROM (
@@ -295,7 +296,7 @@ func (r *Runner) fileOwnership(repoID uint) error {
 			FROM commit_files cf
 			JOIN commits c ON c.id = cf.commit_id
 			JOIN files f ON f.repo_id = cf.repo_id AND f.path = cf.path
-			WHERE cf.repo_id = ?
+			WHERE cf.repo_id = ? AND c.author NOT LIKE '%[bot]%'
 			GROUP BY cf.path, CASE WHEN c.email = '' THEN c.author ELSE c.email END
 		) WHERE rank = 1`, repoID).Error
 	if err != nil {

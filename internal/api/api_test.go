@@ -153,6 +153,8 @@ func TestRepositoryEndpoints(t *testing.T) {
 		"/api/repositories/1/duplicates",
 		"/api/repositories/1/architecture",
 		"/api/repositories/1/metrics",
+		"/api/repositories/1/hotspots?months=0",
+		"/api/repositories/1/knowledge?depth=1",
 	} {
 		resp, _ := get(t, ts, p)
 		if resp.StatusCode != 200 {
