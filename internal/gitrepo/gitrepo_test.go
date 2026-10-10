@@ -2,6 +2,7 @@ package gitrepo
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,9 +123,10 @@ func TestStreamLogs(t *testing.T) {
 	a := New()
 	var commits []models.Commit
 	totalFiles := 0
-	err := a.StreamLogs(context.Background(), root, func(c models.Commit, files []FileChange) {
+	err := a.StreamLogs(context.Background(), root, func(c models.Commit, files []FileChange) error {
 		commits = append(commits, c)
 		totalFiles += len(files)
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("stream: %v", err)
@@ -161,8 +163,9 @@ func TestStreamLogsIgnoresPrivateRefs(t *testing.T) {
 	git(t, root, "commit", "-qm", "detached work")
 
 	var messages []string
-	err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) {
+	err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) error {
 		messages = append(messages, c.Message)
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("stream: %v", err)
@@ -177,11 +180,27 @@ func TestStreamLogsIgnoresPrivateRefs(t *testing.T) {
 	}
 }
 
+func TestStreamLogsStopsOnCallbackError(t *testing.T) {
+	root := makeRepo(t)
+	stop := errors.New("stop")
+	calls := 0
+	err := New().StreamLogs(context.Background(), root, func(models.Commit, []FileChange) error {
+		calls++
+		return stop
+	})
+	if !errors.Is(err, stop) {
+		t.Fatalf("expected callback error, got %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected the stream to stop after the first commit, got %d calls", calls)
+	}
+}
+
 func TestStreamLogsEmptyRepo(t *testing.T) {
 	root := t.TempDir()
 	git(t, root, "init", "-q", "-b", "main", ".")
 	called := false
-	err := New().StreamLogs(context.Background(), root, func(models.Commit, []FileChange) { called = true })
+	err := New().StreamLogs(context.Background(), root, func(models.Commit, []FileChange) error { called = true; return nil })
 	if err != nil {
 		t.Fatalf("stream on empty repo: %v", err)
 	}
@@ -229,7 +248,7 @@ func TestStreamLogsKeepsAuthorTimezone(t *testing.T) {
 	}
 
 	var got models.Commit
-	if err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) { got = c }); err != nil {
+	if err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) error { got = c; return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if got.TZOffset != 180 {

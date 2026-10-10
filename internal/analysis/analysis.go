@@ -173,38 +173,44 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 	if !git.Available() || !git.IsRepo(repo.Path) {
 		return nil
 	}
-	var commits []models.Commit
-	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, changes []gitrepo.FileChange) {
+	// Commits stream straight into the database in batches so memory stays
+	// bounded by the batch, not by the length of the history.
+	const batch = 500
+	commits := make([]models.Commit, 0, batch)
+	flush := func() error {
+		if len(commits) == 0 {
+			return nil
+		}
+		if err := r.db.Create(&commits).Error; err != nil {
+			return fmt.Errorf("insert commits: %w", err)
+		}
+		commits = commits[:0]
+		return nil
+	}
+	seen := 0
+	contrib, files, err := git.AnalyzeHistoryWithCommits(ctx, repo.Path, func(c models.Commit, changes []gitrepo.FileChange) error {
+		c.RepoID = repo.ID
 		c.FilesChanged = len(changes)
 		for _, fc := range changes {
 			c.Insertions += fc.Add
 			c.Deletions += fc.Del
 		}
 		commits = append(commits, c)
+		if len(commits) < batch {
+			return nil
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		seen += len(commits)
+		rep.SetMessage(fmt.Sprintf("git history (%d commits)", seen))
+		return flush()
 	})
 	if err != nil {
 		return err
 	}
-
-	// Persist commits in batches.
-	if len(commits) > 0 {
-		const batch = 500
-		for i := 0; i < len(commits); i += batch {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			end := i + batch
-			if end > len(commits) {
-				end = len(commits)
-			}
-			chunk := commits[i:end]
-			for j := range chunk {
-				chunk[j].RepoID = repo.ID
-			}
-			if err := r.db.Create(&chunk).Error; err != nil {
-				return err
-			}
-		}
+	if err := flush(); err != nil {
+		return err
 	}
 
 	// Contributors rollup.

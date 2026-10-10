@@ -136,8 +136,9 @@ func (a *Analyzer) Tags(ctx context.Context, root string) ([]models.Tag, error) 
 // remotes, and HEAD. Other refs (stashes, notes, tool checkpoints) are skipped
 // because they are not part of the project's history. For each commit it
 // invokes fn with the commit and the files it changed. The callbacks run in a
-// single goroutine in history order.
-func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.Commit, []FileChange)) error {
+// single goroutine in history order; an error from fn stops the stream and
+// is returned.
+func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.Commit, []FileChange) error) error {
 	args := []string{
 		"log", "--branches", "--tags", "--remotes", "--numstat", "--date-order",
 		"--pretty=format:%x1e%H%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s%x1e",
@@ -147,6 +148,8 @@ func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.C
 	if _, err := a.output(ctx, root, "rev-parse", "--verify", "--quiet", "HEAD"); err == nil {
 		args = append(args, "HEAD")
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -158,12 +161,20 @@ func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.C
 
 	var commit models.Commit
 	var files []FileChange
-	flush := func() {
-		if commit.Hash != "" {
-			fn(commit, files)
-			commit = models.Commit{}
-			files = nil
+	flush := func() error {
+		if commit.Hash == "" {
+			return nil
 		}
+		err := fn(commit, files)
+		commit = models.Commit{}
+		files = nil
+		return err
+	}
+	// abort stops git and reaps it before reporting a callback error.
+	abort := func(err error) error {
+		cancel()
+		_ = cmd.Wait()
+		return err
 	}
 
 	sc := bufio.NewScanner(stdout)
@@ -171,7 +182,9 @@ func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.C
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.HasPrefix(line, "\x1e") {
-			flush()
+			if err := flush(); err != nil {
+				return abort(err)
+			}
 			parseHeader(line, &commit)
 			continue
 		}
@@ -179,9 +192,11 @@ func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.C
 			files = append(files, fc)
 		}
 	}
-	flush()
 	if err := sc.Err(); err != nil {
-		return fmt.Errorf("read git log: %w", err)
+		return abort(fmt.Errorf("read git log: %w", err))
+	}
+	if err := flush(); err != nil {
+		return abort(err)
 	}
 	return cmd.Wait()
 }
@@ -227,17 +242,19 @@ func (a *Analyzer) AnalyzeHistory(ctx context.Context, root string) (map[string]
 
 // AnalyzeHistoryWithCommits is like AnalyzeHistory but also invokes onCommit
 // for every commit and its file changes as they stream, so callers can persist
-// commits in one pass.
-func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit, []FileChange)) (map[string]*ContributorStats, map[string]*FileHistory, error) {
+// commits in one pass. An error from onCommit stops the stream.
+func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, onCommit func(models.Commit, []FileChange) error) (map[string]*ContributorStats, map[string]*FileHistory, error) {
 	contrib := map[string]*ContributorStats{}
 	files := map[string]*FileHistory{}
 
-	err := a.StreamLogs(ctx, root, func(c models.Commit, changes []FileChange) {
+	err := a.StreamLogs(ctx, root, func(c models.Commit, changes []FileChange) error {
 		if c.Author == "" {
 			c.Author = c.Email
 		}
 		if onCommit != nil {
-			onCommit(c, changes)
+			if err := onCommit(c, changes); err != nil {
+				return err
+			}
 		}
 		key := c.Email
 		if key == "" {
@@ -272,6 +289,7 @@ func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, o
 				fh.Author = c.Author
 			}
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, nil, err
