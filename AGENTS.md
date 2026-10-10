@@ -19,6 +19,8 @@ From the repository root:
 - `make backend` — build/run the Go API.
 - `make frontend` — run the Vite dev server.
 - `make test` — Go tests, frontend typecheck + tests.
+- `make check` — everything CI checks except the browser tests. Run it before
+  every commit.
 - `make e2e` — build the binary and run the Playwright end-to-end suite
   (`frontend/e2e`): every page, both themes at 390px, and key flows.
 - `make lint` — go vet, golangci-lint (if present locally; always enforced in CI),

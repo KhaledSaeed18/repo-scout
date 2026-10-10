@@ -6,7 +6,7 @@ DEV_DB ?= data/reposcout.db
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: dev backend frontend test e2e lint build ui vet fmt help
+.PHONY: dev backend frontend test e2e check lint build ui vet fmt help
 
 ## dev: run backend + frontend together
 dev:
@@ -26,6 +26,15 @@ frontend:
 test:
 	go test ./...
 	cd frontend && pnpm run typecheck && pnpm run test
+
+## check: everything CI checks except the browser tests, fastest first
+check:
+	@unformatted="$$(find . -name '*.go' -not -path './frontend/*' -exec gofmt -l {} +)"; \
+	if [ -n "$$unformatted" ]; then echo "not gofmt'ed:"; echo "$$unformatted"; exit 1; fi
+	go vet ./...
+	@if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run ./...; else echo "golangci-lint not found; CI will run it"; fi
+	go test ./... -race
+	cd frontend && pnpm run typecheck && pnpm run lint && pnpm run test
 
 ## e2e: build the binary, then run the Playwright end-to-end tests against it
 e2e: build

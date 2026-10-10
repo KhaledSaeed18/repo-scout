@@ -197,6 +197,9 @@ repo-scout scan . \
 | `--max-complexity n` | Fail when any file's total complexity is above `n` |
 | `--max-duplicates n` | Fail when there are more than `n` duplicate groups |
 | `--fail-on cycles,hidden-coupling` | Fail on any circular dependency or hidden dependency |
+| `--base ref` | Also report what changed against `ref` (such as `origin/main`): files added and removed, complexity moves, new and resolved cycles, dependency changes |
+| `--max-complexity-increase n` | With `--base`, fail when total complexity grew by more than `n` |
+| `--fail-on new-cycles` | With `--base`, fail only on circular dependencies the base did not have |
 | `--quiet` | No progress on standard error |
 
 Exit codes: `0` passed, `1` a quality gate failed, `2` bad usage, `3` the scan
@@ -219,6 +222,12 @@ jobs:
           go-version: stable
       - run: go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest
       - run: repo-scout scan . --format sarif --output repo-scout.sarif --fail-on cycles
+        if: github.event_name == 'push'
+      # On pull requests, judge the change rather than the whole codebase.
+      - run: >
+          repo-scout scan . --format sarif --output repo-scout.sarif
+          --base origin/${{ github.base_ref }} --fail-on new-cycles --max-complexity-increase 50
+        if: github.event_name == 'pull_request'
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:

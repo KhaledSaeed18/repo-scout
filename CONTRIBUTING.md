@@ -68,6 +68,7 @@ any Git folder; this repository itself is a good first target.
 | `make backend` | Build and run only the API |
 | `make frontend` | Run only the Vite dev server |
 | `make test` | Go tests, then frontend typecheck and unit tests |
+| `make check` | Everything CI checks except the browser tests: gofmt, vet, golangci-lint, Go tests with `-race`, frontend typecheck, lint and tests |
 | `make e2e` | `make build`, then the Playwright end-to-end tests against that binary (run `pnpm exec playwright install chromium` in `frontend/` once first) |
 | `make lint` | `go vet`, golangci-lint if installed, and oxlint |
 | `make fmt` | `gofmt -w` over the Go code |
@@ -240,12 +241,8 @@ frontend/src/
 Run everything CI runs before you push:
 
 ```sh
-gofmt -l .                     # must print nothing
-go vet ./...
-golangci-lint run ./...
-go test ./... -race
-(cd frontend && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build)
-make e2e                       # builds the binary and runs the browser tests
+make check   # gofmt, go vet, golangci-lint, Go tests with -race, frontend typecheck, lint and tests
+make e2e     # builds the binary and runs the browser tests
 ```
 
 What to test:

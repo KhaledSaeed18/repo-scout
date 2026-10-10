@@ -81,6 +81,7 @@ const (
 	ruleDuplicate = "RS003"
 	ruleCoupling  = "RS004"
 	ruleHotspot   = "RS005"
+	ruleGrowth    = "RS006"
 )
 
 func sarifRules() []sarifRule {
@@ -93,6 +94,7 @@ func sarifRules() []sarifRule {
 		rule(ruleDuplicate, "DuplicateCode", "A block of code is repeated across files.", "warning"),
 		rule(ruleCoupling, "HiddenDependency", "Files keep changing together with nothing linking them.", "note"),
 		rule(ruleHotspot, "Hotspot", "A complex file that changes often.", "note"),
+		rule(ruleGrowth, "ComplexityIncrease", "A file grew more complex than it is in the base.", "note"),
 	}
 }
 
@@ -123,8 +125,12 @@ func WriteSARIF(w io.Writer, r Report) error {
 		if c.At == nil {
 			continue
 		}
+		lvl := level("warning", "no-cycles")
+		if c.New && failing["no-new-cycles"] {
+			lvl = "error"
+		}
 		results = append(results, sarifResult{
-			RuleID: ruleCycle, Level: level("warning", "no-cycles"),
+			RuleID: ruleCycle, Level: lvl,
 			Message:   sarifMessage{Text: fmt.Sprintf("Circular dependency: %s -> %s.", strings.Join(c.Folders, " -> "), c.Folders[0])},
 			Locations: []sarifLocation{location(*c.At)},
 		})
@@ -161,6 +167,19 @@ func WriteSARIF(w io.Writer, r Report) error {
 			Locations:        []sarifLocation{location(Location{Path: p.FileA})},
 			RelatedLocations: []sarifLocation{{ID: 1, Physical: location(Location{Path: p.FileB}).Physical}},
 		})
+	}
+	if c := r.Comparison; c != nil {
+		for _, f := range c.ComplexityChanges {
+			if f.After <= f.Before {
+				continue
+			}
+			results = append(results, sarifResult{
+				RuleID: ruleGrowth, Level: level("note", "max-complexity-increase"),
+				Message: sarifMessage{Text: fmt.Sprintf("Complexity went from %d to %d against %s.",
+					f.Before, f.After, c.Base)},
+				Locations: []sarifLocation{location(Location{Path: f.Path})},
+			})
+		}
 	}
 	for _, h := range r.Hotspots {
 		results = append(results, sarifResult{

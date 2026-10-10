@@ -27,6 +27,20 @@ type Gates struct {
 	NoCycles bool `json:"noCycles,omitempty"`
 	// NoHiddenCoupling fails the run on any coupled pair nothing explains.
 	NoHiddenCoupling bool `json:"noHiddenCoupling,omitempty"`
+	// MaxComplexityIncrease fails the run when total complexity grew by more
+	// than this against the base. Needs a base.
+	MaxComplexityIncrease int `json:"maxComplexityIncrease,omitempty"`
+	// NoNewCycles fails the run on circular dependencies the base did not
+	// have. Needs a base.
+	NoNewCycles bool `json:"noNewCycles,omitempty"`
+}
+
+// Base is the scanned tree of the ref the code is compared against.
+type Base struct {
+	RepoID uint
+	// Ref is the ref as given, Commit what it resolved to.
+	Ref    string
+	Commit string
 }
 
 // Options shape a report.
@@ -36,6 +50,8 @@ type Options struct {
 	// Top caps each list (hotspots, duplicates, hidden coupling).
 	Top   int
 	Gates Gates
+	// Base, when set, adds a comparison against it.
+	Base *Base
 }
 
 // Summary holds the repository's headline numbers.
@@ -58,10 +74,11 @@ type Location struct {
 }
 
 // Cycle is a circular dependency between folders, located at the import
-// that starts it when one is known.
+// that starts it when one is known. New marks cycles the base did not have.
 type Cycle struct {
 	Folders []string  `json:"folders"`
 	At      *Location `json:"at,omitempty"`
+	New     bool      `json:"new,omitempty"`
 }
 
 // Duplicate is a block of code repeated across files.
@@ -97,6 +114,7 @@ type Report struct {
 	HiddenCoupling []coupling.Pair `json:"hiddenCoupling"`
 	Duplicates     []Duplicate     `json:"duplicates"`
 	ComplexFiles   []ComplexFile   `json:"complexFiles"`
+	Comparison     *Comparison     `json:"comparison,omitempty"`
 	Gates          []GateResult    `json:"gates"`
 }
 
@@ -117,22 +135,14 @@ func Build(db *gorm.DB, repoID uint, opts Options) (Report, error) {
 	if err := db.First(&repo, repoID).Error; err != nil {
 		return Report{}, fmt.Errorf("load repository: %w", err)
 	}
+	sum, err := summarize(db, &repo)
+	if err != nil {
+		return Report{}, err
+	}
 	rep := Report{
 		Tool: "repo-scout", Version: opts.Version, Repository: repo.Path, HeadCommit: repo.HeadCommit,
-		GeneratedAt: time.Now().UTC(),
-		Summary: Summary{
-			Files: repo.FileCount, LinesOfCode: repo.TotalCode, Commits: repo.CommitCount,
-			Contributors: repo.ContributorCount, Dependencies: repo.DependencyCount, DuplicateGroups: repo.DupGroupCount,
-		},
+		GeneratedAt: time.Now().UTC(), Summary: sum,
 		Cycles: []Cycle{}, Duplicates: []Duplicate{}, ComplexFiles: []ComplexFile{}, Gates: []GateResult{},
-	}
-	if err := db.Model(&models.File{}).Where("repo_id = ?", repoID).
-		Select("COALESCE(SUM(complexity), 0)").Scan(&rep.Summary.Complexity).Error; err != nil {
-		return Report{}, fmt.Errorf("complexity: %w", err)
-	}
-	if err := db.Model(&models.File{}).Where("repo_id = ?", repoID).
-		Select("COALESCE(SUM(func_count), 0)").Scan(&rep.Summary.Functions).Error; err != nil {
-		return Report{}, fmt.Errorf("functions: %w", err)
 	}
 
 	hot, err := risk.Hotspots(db, repoID, 12, top)
@@ -157,8 +167,33 @@ func Build(db *gorm.DB, repoID uint, opts Options) (Report, error) {
 			return Report{}, fmt.Errorf("complex files: %w", err)
 		}
 	}
+	if opts.Base != nil {
+		if rep.Comparison, err = compare(db, repoID, *opts.Base, rep.Summary, top); err != nil {
+			return Report{}, err
+		}
+		markNewCycles(rep.Cycles, rep.Comparison.baseCycles)
+	}
 	rep.Gates = evaluate(rep, opts.Gates)
 	return rep, nil
+}
+
+// summarize reads a repository's headline numbers.
+func summarize(db *gorm.DB, repo *models.Repository) (Summary, error) {
+	sum := Summary{
+		Files: repo.FileCount, LinesOfCode: repo.TotalCode, Commits: repo.CommitCount,
+		Contributors: repo.ContributorCount, Dependencies: repo.DependencyCount, DuplicateGroups: repo.DupGroupCount,
+	}
+	var totals struct {
+		Complexity int
+		Functions  int
+	}
+	if err := db.Model(&models.File{}).Where("repo_id = ?", repo.ID).
+		Select("COALESCE(SUM(complexity), 0) AS complexity, COALESCE(SUM(func_count), 0) AS functions").
+		Scan(&totals).Error; err != nil {
+		return Summary{}, fmt.Errorf("totals: %w", err)
+	}
+	sum.Complexity, sum.Functions = totals.Complexity, totals.Functions
+	return sum, nil
 }
 
 // evaluate checks each enabled gate against the report.
@@ -183,6 +218,21 @@ func evaluate(r Report, g Gates) []GateResult {
 			Name:   "no-cycles",
 			Passed: len(r.Cycles) == 0,
 			Detail: fmt.Sprintf("%d circular dependencies", len(r.Cycles)),
+		})
+	}
+	if c := r.Comparison; c != nil && g.MaxComplexityIncrease > 0 {
+		grew := r.Summary.Complexity - c.BaseSummary.Complexity
+		out = append(out, GateResult{
+			Name:   "max-complexity-increase",
+			Passed: grew <= g.MaxComplexityIncrease,
+			Detail: fmt.Sprintf("complexity %+d against %s, limit %+d", grew, c.Base, g.MaxComplexityIncrease),
+		})
+	}
+	if c := r.Comparison; c != nil && g.NoNewCycles {
+		out = append(out, GateResult{
+			Name:   "no-new-cycles",
+			Passed: len(c.NewCycles) == 0,
+			Detail: fmt.Sprintf("%d circular dependencies not in %s", len(c.NewCycles), c.Base),
 		})
 	}
 	if g.NoHiddenCoupling {

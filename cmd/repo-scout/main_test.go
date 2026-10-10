@@ -100,3 +100,68 @@ func TestVersion(t *testing.T) {
 		t.Fatalf("unexpected version output %q (exit %d)", out.String(), code)
 	}
 }
+
+func TestScanAgainstABase(t *testing.T) {
+	root := fixture(t)
+	// The fixture's only commit has a cycle; make a base without one, then
+	// bring the cycle back on top of it.
+	gitIn := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=T", "GIT_AUTHOR_EMAIL=t@x", "GIT_COMMITTER_NAME=T", "GIT_COMMITTER_EMAIL=t@x")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	acyclic := "package b\n\nfunc B() {}\n"
+	if err := os.WriteFile(filepath.Join(root, "b/b.go"), []byte(acyclic), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn("commit", "-qam", "break the cycle")
+	gitIn("tag", "base")
+	cyclic := "package b\n\nimport \"example.com/demo/a\"\n\nfunc B() {\n\tif true {\n\t\ta.A()\n\t}\n}\n"
+	if err := os.WriteFile(filepath.Join(root, "b/b.go"), []byte(cyclic), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn("commit", "-qam", "bring it back")
+
+	var out, errOut bytes.Buffer
+	code := run([]string{"scan", "--quiet", "--format", "json", "--base", "base", "--fail-on", "new-cycles", root}, &out, &errOut)
+	if code != exitGateFailed {
+		t.Fatalf("expected the new cycle to fail the run, got exit %d: %s", code, errOut.String())
+	}
+	var rep struct {
+		Comparison struct {
+			Base              string
+			NewCycles         []struct{ Folders []string }
+			ComplexityChanges []struct {
+				Path          string
+				Before, After int
+			}
+		}
+		Gates []struct {
+			Name   string
+			Passed bool
+		}
+	}
+	if err := json.Unmarshal(out.Bytes(), &rep); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	c := rep.Comparison
+	if c.Base != "base" || len(c.NewCycles) != 1 {
+		t.Fatalf("expected one new cycle against base, got %+v", c)
+	}
+	if len(c.ComplexityChanges) != 1 || c.ComplexityChanges[0].Path != "b/b.go" || c.ComplexityChanges[0].After <= c.ComplexityChanges[0].Before {
+		t.Fatalf("expected b/b.go to grow more complex, got %+v", c.ComplexityChanges)
+	}
+	if status, _ := exec.Command("git", "-C", root, "status", "--porcelain").Output(); len(status) != 0 {
+		t.Fatalf("comparing must not touch the repository: %s", status)
+	}
+
+	if code := run([]string{"scan", "--quiet", "--fail-on", "new-cycles", root}, &out, &errOut); code != exitUsage {
+		t.Fatalf("new-cycles without --base should be a usage error, got %d", code)
+	}
+	if code := run([]string{"scan", "--quiet", "--base", "no-such-ref", root}, &out, &errOut); code != exitError {
+		t.Fatalf("an unknown base should fail the scan, got %d", code)
+	}
+}

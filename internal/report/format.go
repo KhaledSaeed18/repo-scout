@@ -34,12 +34,18 @@ func WriteText(w io.Writer, r Report) error {
 			fmt.Fprintf(&b, "  %3.0f  %s  (%d changes, complexity %d)\n", h.Score*100, h.Path, h.Revisions, h.Complexity)
 		}
 	}
+	if c := r.Comparison; c != nil {
+		writeComparison(&b, r.Summary, c)
+	}
 	if len(r.Cycles) > 0 {
 		b.WriteString("\nCircular dependencies\n")
 		for _, c := range r.Cycles {
 			fmt.Fprintf(&b, "  %s -> %s", strings.Join(c.Folders, " -> "), c.Folders[0])
 			if c.At != nil {
 				fmt.Fprintf(&b, "  (from %s)", c.At.Path)
+			}
+			if c.New && r.Comparison != nil {
+				b.WriteString("  new")
 			}
 			b.WriteString("\n")
 		}
@@ -74,6 +80,36 @@ func WriteText(w io.Writer, r Report) error {
 		return fmt.Errorf("write text: %w", err)
 	}
 	return nil
+}
+
+// writeComparison describes what changed against the base.
+func writeComparison(b *strings.Builder, now Summary, c *Comparison) {
+	commit := c.BaseCommit
+	if len(commit) > 7 {
+		commit = commit[:7]
+	}
+	base := c.BaseSummary
+	fmt.Fprintf(b, "\nAgainst %s (%s)\n", c.Base, commit)
+	fmt.Fprintf(b, "  lines of code %+d, complexity %+d, functions %+d, duplicate groups %+d, dependencies %+d\n",
+		now.LinesOfCode-base.LinesOfCode, now.Complexity-base.Complexity, now.Functions-base.Functions,
+		now.DuplicateGroups-base.DuplicateGroups, now.Dependencies-base.Dependencies)
+	fmt.Fprintf(b, "  %s added, %s removed\n", count(c.FilesAdded, "file"), count(c.FilesRemoved, "file"))
+	for _, f := range c.ComplexityChanges {
+		fmt.Fprintf(b, "  %+4d  %s  (%d -> %d)\n", f.After-f.Before, f.Path, f.Before, f.After)
+	}
+	for _, d := range c.Dependencies {
+		switch d.Change {
+		case "added":
+			fmt.Fprintf(b, "  added    %s %s %s\n", d.Manager, d.Name, d.After)
+		case "removed":
+			fmt.Fprintf(b, "  removed  %s %s %s\n", d.Manager, d.Name, d.Before)
+		default:
+			fmt.Fprintf(b, "  changed  %s %s %s -> %s\n", d.Manager, d.Name, d.Before, d.After)
+		}
+	}
+	for _, folders := range c.ResolvedCycles {
+		fmt.Fprintf(b, "  resolved cycle %s -> %s\n", strings.Join(folders, " -> "), folders[0])
+	}
 }
 
 // count pairs a number with its noun: count(1, "file") is "1 file".
