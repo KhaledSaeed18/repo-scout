@@ -3,6 +3,7 @@
 package architecture
 
 import (
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -237,8 +238,9 @@ func resolveJS(fromFile, spec string, b *builder) []target {
 	if !strings.HasPrefix(spec, "./") && !strings.HasPrefix(spec, "../") {
 		return nil // external or alias
 	}
+	// Repository paths always use "/", whatever the operating system.
 	dir := folderOf(fromFile)
-	base := filepath.Clean(filepath.Join(dir, spec))
+	base := path.Join(dir, spec)
 	candidates := []string{
 		base, base + ".ts", base + ".tsx", base + ".js", base + ".jsx",
 		base + ".mjs", base + ".cjs",

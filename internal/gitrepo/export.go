@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -32,7 +31,7 @@ func (a *Analyzer) ResolveCommit(ctx context.Context, root, ref string) (string,
 func (a *Analyzer) Export(ctx context.Context, root, commit, dest string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "-C", root, "archive", "--format=tar", commit)
+	cmd := gitCommand(ctx, root, "archive", "--format=tar", commit)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("pipe git archive: %w", err)
@@ -44,6 +43,12 @@ func (a *Analyzer) Export(ctx context.Context, root, commit, dest string) error 
 		cancel()
 		_ = cmd.Wait()
 		return err
+	}
+	// The tar reader stops at the end-of-archive marker, but git still writes
+	// the record padding after it. Read it, or git blocks on a full pipe and
+	// never exits (Windows pipes are too small to absorb it).
+	if _, err := io.Copy(io.Discard, stdout); err != nil {
+		return fmt.Errorf("read git archive: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("git archive %s: %w", commit, err)

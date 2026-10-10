@@ -169,7 +169,7 @@ func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.C
 func (a *Analyzer) runLog(ctx context.Context, root string, args []string, stdin io.Reader, fn func(models.Commit, []FileChange) error) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	cmd := gitCommand(ctx, root, args...)
 	cmd.Stdin = stdin
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -469,8 +469,17 @@ func (a *Analyzer) AnalyzeHistoryWithCommits(ctx context.Context, root string, c
 	return contrib, files, nil
 }
 
-func (a *Analyzer) output(ctx context.Context, root string, args ...string) (string, error) {
+// gitCommand prepares a git command in root. Once its context is cancelled
+// and the process killed, Wait gives up on the output pipes after a second:
+// on Windows git may hand them to a child process that outlives the kill.
+func gitCommand(ctx context.Context, root string, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	cmd.WaitDelay = time.Second
+	return cmd
+}
+
+func (a *Analyzer) output(ctx context.Context, root string, args ...string) (string, error) {
+	cmd := gitCommand(ctx, root, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		return "", err

@@ -424,7 +424,8 @@ func TestScanRequestReusesActiveJob(t *testing.T) {
 	active := models.Job{RepoID: repo.ID, Kind: "scan", Status: models.JobQueued}
 	srv.db.Create(&active)
 
-	body := strings.NewReader(`{"path":"` + repo.Path + `"}`)
+	// Quoted as JSON: Windows paths carry backslashes.
+	body := strings.NewReader(`{"path":` + strconv.Quote(repo.Path) + `}`)
 	resp, err := http.Post(ts.URL+"/api/repositories", "application/json", body)
 	if err != nil {
 		t.Fatal(err)
