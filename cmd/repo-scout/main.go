@@ -30,6 +30,7 @@ Usage:
   repo-scout version
 
 Run "repo-scout <command> -h" for a command's flags.
+Documentation: https://github.com/KhaledSaeed18/repo-scout
 `
 
 func main() {
@@ -41,6 +42,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 	cmd := "serve"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		cmd, args = args[0], args[1:]
+	}
+	if len(args) > 0 && cmd == "serve" {
+		switch args[0] {
+		case "-v", "-version", "--version":
+			cmd, args = "version", nil
+		case "-h", "-help", "--help":
+			cmd, args = "help", nil
+		}
 	}
 	switch cmd {
 	case "serve":

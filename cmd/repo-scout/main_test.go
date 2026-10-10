@@ -95,9 +95,15 @@ func TestUsageErrors(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
+	for _, args := range [][]string{{"version"}, {"--version"}, {"-v"}} {
+		var out bytes.Buffer
+		if code := run(args, &out, &out); code != exitOK || out.String() != "repo-scout dev\n" {
+			t.Fatalf("%v: unexpected version output %q (exit %d)", args, out.String(), code)
+		}
+	}
 	var out bytes.Buffer
-	if code := run([]string{"version"}, &out, &out); code != exitOK || out.String() != "repo-scout dev\n" {
-		t.Fatalf("unexpected version output %q (exit %d)", out.String(), code)
+	if code := run([]string{"--help"}, &out, &out); code != exitOK || !strings.Contains(out.String(), "repo-scout scan") {
+		t.Fatalf("unexpected help output %q (exit %d)", out.String(), code)
 	}
 }
 
