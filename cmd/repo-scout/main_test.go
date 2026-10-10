@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"testing"
 )
@@ -169,5 +170,26 @@ func TestScanAgainstABase(t *testing.T) {
 	}
 	if code := run([]string{"scan", "--quiet", "--base", "no-such-ref", root}, &out, &errOut); code != exitError {
 		t.Fatalf("an unknown base should fail the scan, got %d", code)
+	}
+}
+
+func TestResolveVersion(t *testing.T) {
+	module := func(v string) *debug.BuildInfo { return &debug.BuildInfo{Main: debug.Module{Version: v}} }
+	cases := []struct {
+		stamped string
+		info    *debug.BuildInfo
+		ok      bool
+		want    string
+	}{
+		{"1.2.0", module("v9.9.9"), true, "1.2.0"}, // release builds keep their stamp
+		{"dev", module("v1.0.0"), true, "1.0.0"},   // go install
+		{"dev", module("(devel)"), true, "dev"},    // built from a checkout
+		{"dev", module(""), true, "dev"},
+		{"dev", nil, false, "dev"},
+	}
+	for _, c := range cases {
+		if got := resolveVersion(c.stamped, c.info, c.ok); got != c.want {
+			t.Errorf("resolveVersion(%q, %v) = %q, want %q", c.stamped, c.info, got, c.want)
+		}
 	}
 }

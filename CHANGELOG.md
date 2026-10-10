@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html); see
 
 ## [Unreleased]
 
+### Fixed
+
+- Binaries installed with `go install` report their version instead of
+  `dev`.
+
 ## [1.0.0] - 2026-10-10
 
 The first public release. Repo Scout scans any Git repository on your

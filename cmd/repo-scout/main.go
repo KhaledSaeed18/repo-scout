@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 )
 
-// version is stamped at build time with -ldflags "-X main.version=...".
+// version is stamped at build time with -ldflags "-X main.version=...";
+// otherwise it is resolved from the module version (see resolveVersion).
 var version = "dev"
 
 // Exit codes. Scripts and CI rely on them.
@@ -34,7 +36,22 @@ Documentation: https://github.com/KhaledSaeed18/repo-scout
 `
 
 func main() {
+	info, ok := debug.ReadBuildInfo()
+	version = resolveVersion(version, info, ok)
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// resolveVersion keeps a version stamped by the release build, and otherwise
+// uses the module version Go records in binaries built with go install
+// (v1.2.0 becomes 1.2.0, matching release builds). Source builds stay "dev".
+func resolveVersion(stamped string, info *debug.BuildInfo, ok bool) string {
+	if stamped != "dev" || !ok || info == nil {
+		return stamped
+	}
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		return strings.TrimPrefix(v, "v")
+	}
+	return stamped
 }
 
 // run dispatches to a command and returns the process exit code.
