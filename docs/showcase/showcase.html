@@ -37,9 +37,17 @@
     .note h2 { margin: 0 0 12px; font-family: 'Barlow Semi Condensed', sans-serif; font-size: 32px; font-weight: 600; line-height: 1.1; }
     .note p { margin: 0; font-size: 23px; line-height: 1.4; color: var(--muted-foreground); }
     .detail .intro { top: 156px; width: 470px; }
-    .architecture .frame { top: 334px; }
+    .plate.architecture { height: auto; min-height: 1280px; padding: 334px 64px 110px; }
+    .architecture .frame { position: relative; top: auto; left: auto; width: 1120px; }
     .architecture .notes { top: 362px; }
     .note .swatch { display: block; width: 30px; height: 3px; background: var(--primary); margin-bottom: 16px; }
+    .plate.insights { padding: 334px 64px 110px; }
+    .insight-stack { display: grid; gap: 30px; }
+    .insight-row { display: grid; grid-template-columns: 1120px 1fr; gap: 60px; align-items: start; }
+    .insights .frame { position: relative; width: 1120px; }
+    .insights .screen { margin-bottom: 12px; }
+    .insights .note { border: 0; padding: 24px 0 0; }
+    .insights h1 { font-size: 76px; }
   </style>
 </head>
 <body>
@@ -62,7 +70,7 @@
     <p class="intro">Explore the history, code and structure of any Git repository. All on your machine.</p>
     <div class="frame">
       <div class="chrome"><span>Repository overview</span><span class="local">Running on localhost</span></div>
-      <img class="screen" src="captures/overview.png" alt="Repo Scout overview of TanStack Query, including languages, commit activity, complex files and contributors" />
+      <img class="screen" src="captures/overview.png" alt="Repo Scout overview of TanStack Query, including the updated sidebar, languages, commit activity, change hotspots and contributors" />
     </div>
     <div class="footer"><span>One scan. The whole picture.</span><span>Real analysis of TanStack/query</span></div>
   </article>
@@ -99,6 +107,37 @@
       <div class="note"><h2>Inspect the findings</h2><p>Find import cycles, entry points and potentially unused files.</p></div>
     </aside>
     <div class="footer"><span>Explore interactively. Export as SVG.</span><span>Repo Scout analyzing itself</span></div>
+  </article>
+  <article class="plate insights" id="insights">
+    <svg class="contours" viewBox="0 0 1050 900" aria-hidden="true"><use href="#terrain" /></svg>
+    <img class="brand" src="/brand/logo.svg" alt="Repo Scout" />
+    <span class="context">Explore knowledge and change</span>
+    <h1>Know where change<br />needs care.</h1>
+    <p class="intro">Connect the people who know the code, the files that keep changing and the dependencies history reveals.</p>
+    <div class="insight-stack">
+      <div class="insight-row">
+        <div class="frame">
+          <div class="chrome"><span>Knowledge</span><span class="local">Ownership and bus factor</span></div>
+          <img class="screen" src="captures/knowledge.png" alt="TanStack Query knowledge report showing bus factor, inactive authors and ownership by folder" />
+        </div>
+        <div class="note"><span class="swatch"></span><h2>Who knows the code</h2><p>See ownership by folder, the bus factor and code whose main author has become inactive.</p></div>
+      </div>
+      <div class="insight-row">
+        <div class="frame">
+          <div class="chrome"><span>Hotspots</span><span class="local">Changes over the last year</span></div>
+          <img class="screen" src="captures/hotspots.png" alt="TanStack Query files ranked by change frequency and complexity, with authors, churn and hotspot scores" />
+        </div>
+        <div class="note"><span class="swatch"></span><h2>Where changes cost more</h2><p>Find complex files that keep changing. Compare churn, authors and scores across the repository.</p></div>
+      </div>
+      <div class="insight-row">
+        <div class="frame dark">
+          <div class="chrome"><span>Change coupling</span><span class="local">Files that change together</span></div>
+          <img class="screen" src="captures/coupling.png" alt="TanStack Query file pairs that change together, showing shared commits, coupling strength and relationship types" />
+        </div>
+        <div class="note"><span class="swatch"></span><h2>What history connects</h2><p>Follow files that change together and uncover dependencies the import graph cannot explain.</p></div>
+      </div>
+    </div>
+    <div class="footer"><span>Knowledge, hotspots and change coupling.</span><span>Real analysis of TanStack/query</span></div>
   </article>
   <script>
     const view = new URLSearchParams(location.search).get('view') || 'overview';

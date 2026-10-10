@@ -1,6 +1,7 @@
 // Optional documentation tooling; does not add dependencies to the app.
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
+import { execFileSync } from 'node:child_process'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { dirname, extname, resolve, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -42,12 +43,17 @@ try {
     const describe = repository => ({ repository: repository.name, remote: repository.gitRemote,
       commit: repository.headCommit, files: repository.fileCount, commits: repository.commitCount,
       contributors: repository.contributorCount })
-    const evidence = { capturedAt: new Date().toISOString(), repositories: [describe(repo), describe(structureRepo)], views: [] }
+    const evidence = { capturedAt: new Date().toISOString(),
+      applicationCommit: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+      repositories: [describe(repo), describe(structureRepo)], views: [] }
 
     for (const view of [
       { name: 'overview', path: '/', theme: 'dark', width: 1440, height: 1080, repo },
       { name: 'activity', path: '/activity', theme: 'light', width: 1280, height: 900, cropHeight: 680, repo },
-      { name: 'architecture', path: '/architecture', theme: 'dark', width: 1280, height: 1000, cropHeight: 720, repo: structureRepo },
+      { name: 'architecture', path: '/architecture', theme: 'dark', width: 1280, height: 1000, cropGraph: true, repo: structureRepo },
+      { name: 'knowledge', path: '/knowledge', title: 'Knowledge', theme: 'light', width: 1440, height: 1080, rows: 3, repo },
+      { name: 'hotspots', path: '/hotspots', title: 'Hotspots', theme: 'light', width: 1440, height: 1080, rows: 5, cropSection: true, repo },
+      { name: 'coupling', path: '/coupling', title: 'Change coupling', theme: 'dark', width: 1440, height: 1080, rows: 4, cropSection: true, repo },
     ]) {
       const context = await browser.newContext({ viewport: { width: view.width, height: view.height },
         deviceScaleFactor: 2, colorScheme: view.theme, reducedMotion: 'reduce' })
@@ -60,13 +66,17 @@ try {
         }
       })
       await page.goto(`${origin}${view.path}?repo=${view.repo.id}`)
-      await page.getByRole('heading', { name: view.name === 'overview' ? view.repo.name :
-        view.name === 'activity' ? 'Activity' : 'Architecture', exact: true }).waitFor()
+      await page.getByRole('heading', { name: view.title || (view.name === 'overview' ? view.repo.name :
+        view.name === 'activity' ? 'Activity' : 'Architecture'), exact: true }).waitFor()
       if (view.name === 'overview') {
-        await page.getByRole('heading', { name: 'Most complex files', exact: true }).waitFor()
+        const hotspots = page.locator('main section').filter({ has: page.getByRole('heading', { name: 'Hotspots', exact: true }) })
+        await hotspots.locator('li').first().waitFor()
+        for (const label of ['Knowledge', 'Hotspots', 'Change coupling', 'Portfolio']) {
+          await page.getByRole('link', { name: label, exact: true }).waitFor()
+        }
       } else if (view.name === 'activity') {
         await page.getByRole('img', { name: /commits between/ }).waitFor()
-      } else {
+      } else if (view.name === 'architecture') {
         await page.locator('.react-flow__node').first().waitFor()
         const nodes = page.locator('.react-flow__node')
         const labels = await nodes.allTextContents()
@@ -81,6 +91,8 @@ try {
         await page.mouse.up()
         // Fit-view transitions must finish before taking the photograph.
         await page.waitForTimeout(600)
+      } else {
+        await page.locator('main section').first().locator('tbody tr').nth(view.rows - 1).waitFor()
       }
       await page.waitForLoadState('networkidle')
       await page.evaluate(() => document.fonts.ready)
@@ -88,12 +100,25 @@ try {
         (theme === 'dark'), view.theme)
       if (errors.length) throw new Error(errors.join('\n'))
       const bounds = await page.locator('main').boundingBox()
+      let clip = view.cropHeight ? { x: bounds.x, y: bounds.y, width: bounds.width, height: view.cropHeight } : undefined
+      if (view.cropGraph) {
+        const graph = await page.locator('main section').first().boundingBox()
+        clip = { x: bounds.x, y: bounds.y, width: bounds.width, height: graph.y + graph.height + 16 - bounds.y }
+      }
+      if (view.rows) {
+        const section = page.locator('main section').first()
+        const sectionBounds = await section.boundingBox()
+        const row = await section.locator('tbody tr').nth(view.rows - 1).boundingBox()
+        const top = view.cropSection ? sectionBounds.y - 12 : bounds.y
+        clip = { x: bounds.x, y: top, width: bounds.width, height: row.y + row.height - top }
+      }
       await page.screenshot({ path: resolve(here, `captures/${view.name}.png`), animations: 'disabled',
-        ...(view.cropHeight ? { clip: { x: bounds.x, y: bounds.y, width: bounds.width,
-          height: view.cropHeight } } : {}) })
+        ...(clip ? { clip } : {}) })
       evidence.views.push({ route: view.path, repository: view.repo.name, theme: view.theme,
         viewport: { width: view.width, height: view.height },
         ...(view.cropHeight ? { cropHeight: view.cropHeight } : {}),
+        ...(view.rows ? { rows: view.rows } : {}),
+        ...(clip ? { crop: clip } : {}),
         ...(view.name === 'architecture' ? { selectedFolder: 'internal/analysis', zoomInSteps: 3, panLeft: 170 } : {}) })
       console.log(`Captured ${view.name}: real ${view.repo.name} data, ${view.theme} theme`)
       await context.close()
@@ -129,15 +154,14 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 1440 }, deviceScaleFactor: 2 })
-    for (const view of ['overview', 'history', 'structure']) {
+    for (const view of ['overview', 'history', 'structure', 'insights']) {
       await page.goto(`http://127.0.0.1:${server.address().port}/docs/showcase/showcase.html?view=${view}`)
       await page.evaluate(() => document.fonts.ready)
       await page.waitForFunction(() => Array.from(document.images).every(image => image.complete && image.naturalWidth > 0))
       const plate = page.locator(`#${view}`)
       const collisions = await plate.evaluate(plate => {
-        const frame = plate.querySelector('.frame').getBoundingClientRect()
         const footer = plate.querySelector('.footer').getBoundingClientRect()
-        return frame.bottom > footer.top
+        return Array.from(plate.querySelectorAll('.frame')).some(frame => frame.getBoundingClientRect().bottom > footer.top)
       })
       if (collisions) throw new Error(`${view}: screenshot overlaps footer; adjust plate height.`)
       await plate.screenshot({ path: resolve(here, `${view}.png`), animations: 'disabled' })

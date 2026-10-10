@@ -30,13 +30,13 @@ click through instead of a wall of terminal output.
 ## See it in action
 
 A real scan of [TanStack Query](https://github.com/TanStack/query):
-3,602 files, 5,517 commits and 1,141 contributors, explored locally.
+3,602 files, 5,524 commits and 1,141 contributors, explored locally.
 Open any image for the full-resolution view.
 
-[![Repo Scout's dark-theme overview of TanStack Query, showing language distribution, commit activity, complexity hot spots and contributors](docs/showcase/overview.png)](docs/showcase/overview.png)
+[![Repo Scout's dark-theme overview of TanStack Query, showing the updated sidebar, language distribution, commit activity, change hotspots and contributors](docs/showcase/overview.png)](docs/showcase/overview.png)
 
 <details>
-<summary>Explore the history and architecture views</summary>
+<summary>Explore history, architecture, knowledge and change</summary>
 
 ### Follow the history
 
@@ -51,6 +51,14 @@ Repo Scout analyzing itself: select a folder to trace its imports, change
 the graph's detail level, and inspect the architecture findings.
 
 [![Repo Scout's dark-theme architecture view, highlighting the analysis package and its connections to other backend packages](docs/showcase/structure.png)](docs/showcase/structure.png)
+
+### Understand knowledge and change
+
+Three views of TanStack Query: Knowledge maps ownership and bus factor,
+Hotspots ranks complex files that keep changing, and Change coupling
+reveals files that change together, including hidden dependencies.
+
+[![Three populated TanStack Query views showing knowledge and ownership, change hotspots, and coupled file pairs](docs/showcase/insights.png)](docs/showcase/insights.png)
 
 </details>
 

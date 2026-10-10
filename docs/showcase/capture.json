@@ -1,21 +1,22 @@
 {
-  "capturedAt": "2026-10-09T18:03:09.477Z",
+  "capturedAt": "2026-10-10T16:15:31.790Z",
+  "applicationCommit": "847fdc15f85887f9625c748d4cdaf9f2e3ed09a3",
   "repositories": [
     {
       "repository": "query",
       "remote": "https://github.com/TanStack/query.git",
-      "commit": "a8163e00b7c02b3e5ce3f6381c13aec1b894cd71",
+      "commit": "22621e773cdc68972adab52ebd88cad62c966fdb",
       "files": 3602,
-      "commits": 5517,
+      "commits": 5524,
       "contributors": 1141
     },
     {
       "repository": "repo-scout",
       "remote": "https://github.com/KhaledSaeed18/repo-scout.git",
-      "commit": "52ad56864c55edff2895907923b3e9ff13073d3e",
-      "files": 169,
-      "commits": 176,
-      "contributors": 1
+      "commit": "847fdc15f85887f9625c748d4cdaf9f2e3ed09a3",
+      "files": 238,
+      "commits": 216,
+      "contributors": 2
     }
   ],
   "views": [
@@ -36,7 +37,13 @@
         "width": 1280,
         "height": 900
       },
-      "cropHeight": 680
+      "cropHeight": 680,
+      "crop": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 680
+      }
     },
     {
       "route": "/architecture",
@@ -46,10 +53,63 @@
         "width": 1280,
         "height": 1000
       },
-      "cropHeight": 720,
+      "crop": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 768.5
+      },
       "selectedFolder": "internal/analysis",
       "zoomInSteps": 3,
       "panLeft": 170
+    },
+    {
+      "route": "/knowledge",
+      "repository": "query",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "rows": 3,
+      "crop": {
+        "x": 240,
+        "y": 0,
+        "width": 1200,
+        "height": 539.25
+      }
+    },
+    {
+      "route": "/hotspots",
+      "repository": "query",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "rows": 5,
+      "crop": {
+        "x": 240,
+        "y": 166.5,
+        "width": 1200,
+        "height": 302.75
+      }
+    },
+    {
+      "route": "/coupling",
+      "repository": "query",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "rows": 4,
+      "crop": {
+        "x": 240,
+        "y": 189,
+        "width": 1200,
+        "height": 334.25
+      }
     }
   ]
 }

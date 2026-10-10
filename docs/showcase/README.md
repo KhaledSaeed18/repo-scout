@@ -1,15 +1,16 @@
 # README showcase
 
-The three PNGs in this directory are designed compositions of real Repo
+The four PNGs in this directory are designed compositions of real Repo
 Scout screenshots. The overview and activity panels use a full-history
-clone of TanStack Query; the architecture panel uses Repo Scout itself.
+clone of TanStack Query, as does the combined knowledge, hotspots and change
+coupling panel. The architecture panel uses Repo Scout itself.
 `capture.json` records the scanned revisions, repository totals, themes,
-viewports and graph interactions. The captures contain no invented data
+viewports, application revision and graph interactions. The captures contain no invented data
 or modified interface text.
 
-The overview appears directly in the root README. The two detailed panels
+The overview appears directly in the root README. The three detailed panels
 live in an expandable gallery to keep the rest of the documentation easy
-to reach. All three link to their full-resolution images.
+to reach. All four link to their full-resolution images.
 
 ## Sources
 
@@ -39,7 +40,7 @@ node .cache/showcase-tools/node_modules/playwright/cli.js install chromium
 SHOWCASE_CHROMIUM="/absolute/path/to/chromium" node docs/showcase/build.mjs
 ```
 
-Rendering does not require the app server or demo clones. Review all three
+Rendering does not require the app server or demo clones. Review all four
 output images after changing the layout; the renderer checks for missing
 images and screenshot/footer overlap.
 
@@ -70,6 +71,13 @@ data or change the UI. The activity and architecture captures crop only
 the browser viewport to focus on page content. The architecture capture
 selects `internal/analysis`, zooms in and pans through the graph using its
 normal controls.
+
+The combined insights panel uses three separate screenshots of TanStack
+Query. Knowledge includes the summary and first three folder rows; Hotspots
+shows the ranked-files section and first five rows; Change coupling shows
+the coupled-pairs section and first four rows. Table crops end after whole
+rows, and the composition sizes itself to their heights. Each view must
+contain populated rows before the capture proceeds.
 
 When refreshing, update the root README's totals to match `capture.json`.
 If you choose different demo repositories, update the captions, image alt
