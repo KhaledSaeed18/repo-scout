@@ -187,7 +187,3 @@ func hasLineComment(line string, markers []string) bool {
 	}
 	return false
 }
-
-// Detect names the extension of a source file when it is one of the tracked
-// languages (used by metrics to know which files to analyze).
-func (l *Lang) CanonicalName() string { return l.Name }

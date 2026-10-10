@@ -204,10 +204,8 @@ func (b *builder) resolve(fromFile, lang, spec string) []target {
 		return resolvePython(fromFile, spec, b)
 	case "Rust":
 		return resolveRust(fromFile, spec, b)
-	case "Java", "Kotlin":
-		return resolveJavaLike(spec, b)
-	case "C#":
-		return resolveJavaLike(spec, b)
+	case "Java", "Kotlin", "C#":
+		return resolveJavaLike(lang, spec, b)
 	case "C", "C++":
 		return resolveCPP(fromFile, spec, b)
 	case "PHP":
@@ -321,35 +319,24 @@ func resolveRust(fromFile, spec string, b *builder) []target {
 	return nil // external crate
 }
 
-func resolveJavaLike(spec string, b *builder) []target {
+// resolveJavaLike maps a dotted import (com.acme.util.Strings) to a source
+// file under the usual roots. Kotlin may import Java classes, so it tries
+// both extensions.
+func resolveJavaLike(lang, spec string, b *builder) []target {
 	parts := strings.Split(spec, ".")
 	if len(parts) < 2 {
 		return nil
 	}
-	dir := filepath.ToSlash(filepath.Join(parts[:len(parts)-1]...))
-	file := parts[len(parts)-1]
-	ext := ".java"
-	if b.hasExt(file, ".java") || b.hasExt(file, ".kt") || b.hasExt(file, ".cs") {
-		ext = guessExt(file, b)
-	}
+	rel := filepath.ToSlash(filepath.Join(parts...))
+	exts := map[string][]string{"Java": {".java"}, "Kotlin": {".kt", ".java"}, "C#": {".cs"}}[lang]
 	for _, prefix := range []string{"", "src/main/java/", "src/main/kotlin/", "src/"} {
-		p := prefix + dir + "/" + file + ext
-		if b.fileSet[p] {
-			return []target{{path: p, resolved: true}}
+		for _, ext := range exts {
+			if p := prefix + rel + ext; b.fileSet[p] {
+				return []target{{path: p, resolved: true}}
+			}
 		}
 	}
 	return nil
-}
-
-func (b *builder) hasExt(name, ext string) bool { return strings.HasSuffix(name, ext) }
-
-func guessExt(file string, b *builder) string {
-	for _, e := range []string{".java", ".kt", ".cs"} {
-		if b.fileSet[file+e] {
-			return e
-		}
-	}
-	return ".java"
 }
 
 func resolveCPP(fromFile, spec string, b *builder) []target {
