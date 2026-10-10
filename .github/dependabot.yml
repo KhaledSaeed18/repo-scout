@@ -16,6 +16,11 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    ignore:
+      # Types must match the Node version we run on (22, see ci.yml), not the
+      # newest one; they move with it.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend:
         update-types: [minor, patch]
@@ -36,5 +41,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Node moves to a new LTS deliberately: odd releases are short-lived and
+      # Node 25 dropped the corepack the image build uses.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: build(deps)

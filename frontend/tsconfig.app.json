@@ -7,10 +7,8 @@
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
-    "ignoreDeprecations": "6.0",
 
-    /* Path aliases for imports */
-    "baseUrl": ".",
+    /* Path aliases for imports, relative to this file */
     "paths": {
       "@/*": ["./src/*"]
     },
