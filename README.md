@@ -230,6 +230,7 @@ jobs:
 - `make backend`: build/run the Go API only (no embedded interface)
 - `make frontend`: Vite dev server only
 - `make test`: Go tests + frontend typecheck/tests
+- `make e2e`: Playwright end-to-end tests against the built binary
 - `make lint`: go vet + golangci-lint (if present) + frontend eslint
 - `make build`: one `bin/repo-scout` binary with the interface embedded
 

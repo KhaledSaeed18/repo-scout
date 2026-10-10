@@ -68,6 +68,7 @@ any Git folder; this repository itself is a good first target.
 | `make backend` | Build and run only the API |
 | `make frontend` | Run only the Vite dev server |
 | `make test` | Go tests, then frontend typecheck and unit tests |
+| `make e2e` | `make build`, then the Playwright end-to-end tests against that binary (run `pnpm exec playwright install chromium` in `frontend/` once first) |
 | `make lint` | `go vet`, golangci-lint if installed, and oxlint |
 | `make fmt` | `gofmt -w` over the Go code |
 | `make ui` | Build the frontend and stage it in `internal/webui/dist` for embedding |
@@ -238,7 +239,7 @@ go vet ./...
 golangci-lint run ./...
 go test ./... -race
 (cd frontend && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build)
-make build                     # the embedded single binary still compiles
+make e2e                       # builds the binary and runs the browser tests
 ```
 
 What to test:
@@ -252,6 +253,11 @@ What to test:
   `internal/api/api_test.go`.
 - **Frontend helpers** are tested with Vitest. Anything involving dates should
   pass in any timezone (try `TZ=America/Los_Angeles` and `TZ=Pacific/Kiritimati`).
+- **Pages and flows** are covered by Playwright in `frontend/e2e`, against
+  the real binary and a fixture repository built in `setup.e2e.ts`. A new
+  page goes in `e2e/routes.ts`, which checks that it renders without errors
+  and fits 390px in both themes; a new interaction gets a test in
+  `flows.e2e.ts`.
 - **UI changes:** check the page in both themes, at 390px wide, and with the
   keyboard, and add screenshots to the pull request.
 

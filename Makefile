@@ -6,7 +6,7 @@ DEV_DB ?= data/reposcout.db
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: dev backend frontend test lint build ui vet fmt help
+.PHONY: dev backend frontend test e2e lint build ui vet fmt help
 
 ## dev: run backend + frontend together
 dev:
@@ -26,6 +26,10 @@ frontend:
 test:
 	go test ./...
 	cd frontend && pnpm run typecheck && pnpm run test
+
+## e2e: build the binary, then run the Playwright end-to-end tests against it
+e2e: build
+	cd frontend && pnpm run e2e
 
 ## lint: go vet, golangci-lint (if present), frontend oxlint
 lint:

@@ -19,6 +19,8 @@ From the repository root:
 - `make backend` — build/run the Go API.
 - `make frontend` — run the Vite dev server.
 - `make test` — Go tests, frontend typecheck + tests.
+- `make e2e` — build the binary and run the Playwright end-to-end suite
+  (`frontend/e2e`): every page, both themes at 390px, and key flows.
 - `make lint` — go vet, golangci-lint (if present locally; always enforced in CI),
   frontend oxlint.
 - `make build` — one `bin/repo-scout` with the frontend embedded (`-tags embedui`).
@@ -109,7 +111,8 @@ Outside contributors work in forks and open pull requests, as described in
 - **Backend**: `gofmt` check, `go vet`, `golangci-lint` (config in
   `.golangci.yml`), `go build ./...`, `go test ./... -race` with coverage.
 - **Frontend**: `pnpm install --frozen-lockfile`, typecheck, lint, test, build.
-- **Single binary**: `make build` with the interface embedded, then a smoke
-  test that the binary serves the API and the interface.
+- **Single binary and end-to-end**: `make build` with the interface embedded,
+  a smoke test that the binary serves the API and the interface, then the
+  Playwright suite against it.
 
 All must pass before merging.

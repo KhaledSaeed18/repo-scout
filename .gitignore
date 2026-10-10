@@ -74,3 +74,5 @@ test-results/
 
 # Generated Files
 generated/
+# End-to-end test data
+frontend/.e2e/

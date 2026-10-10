@@ -1,0 +1,19 @@
+/** Every page in the app with its heading; the overview is titled by repository. */
+export const routes: { path: string; heading: string | RegExp }[] = [
+  { path: '/', heading: /^repo-scout-fixture-/ },
+  { path: '/activity', heading: 'Activity' },
+  { path: '/commits', heading: 'Commits' },
+  { path: '/contributors', heading: 'Contributors' },
+  { path: '/knowledge', heading: 'Knowledge' },
+  { path: '/branches', heading: 'Branches & tags' },
+  { path: '/files', heading: 'Files' },
+  { path: '/search', heading: 'Search' },
+  { path: '/metrics', heading: 'Metrics' },
+  { path: '/hotspots', heading: 'Hotspots' },
+  { path: '/duplicates', heading: 'Duplicates' },
+  { path: '/architecture', heading: 'Architecture' },
+  { path: '/coupling', heading: 'Change coupling' },
+  { path: '/dependencies', heading: 'Dependencies' },
+  { path: '/repositories', heading: 'Repositories' },
+  { path: '/settings', heading: 'Settings' },
+]
