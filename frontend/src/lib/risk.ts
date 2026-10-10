@@ -1,4 +1,4 @@
-import type { CouplingLink } from './types'
+import type { CouplingLink, PortfolioEntry } from './types'
 
 /** Windows offered for counting changes, in months; 0 means all history. */
 export const hotspotWindows = [
@@ -59,4 +59,33 @@ export function linkLabel(link: CouplingLink): string {
 /** The partner of path in a coupled pair. */
 export function partnerOf(pair: { fileA: string; fileB: string }, path: string): string {
   return pair.fileA === path ? pair.fileB : pair.fileA
+}
+
+/** Orders the portfolio offers. */
+export const portfolioSorts = [
+  { value: 'name', label: 'Name' },
+  { value: 'size', label: 'Largest' },
+  { value: 'busFactor', label: 'Lowest bus factor' },
+  { value: 'hidden', label: 'Most hidden dependencies' },
+  { value: 'growth', label: 'Fastest growing' },
+]
+
+/** Sorts portfolio entries without mutating them; name breaks ties. */
+export function sortPortfolio(entries: PortfolioEntry[], by: string): PortfolioEntry[] {
+  const key: Record<string, (e: PortfolioEntry) => number> = {
+    size: (e) => -e.repository.totalCode,
+    busFactor: (e) => e.busFactor,
+    hidden: (e) => -e.hiddenDependencies,
+    growth: (e) => -(e.linesChange ?? 0),
+  }
+  const k = key[by]
+  return [...entries].sort(
+    (a, b) => (k ? k(a) - k(b) : 0) || a.repository.name.localeCompare(b.repository.name),
+  )
+}
+
+/** "+1,204", "−3" or "" when unknown or unchanged. */
+export function signed(n: number | null): string {
+  if (!n) return ''
+  return `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString('en-US')}`
 }

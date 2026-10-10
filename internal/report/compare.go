@@ -110,11 +110,11 @@ func cycleKey(folders []string) string {
 }
 
 func (c *Comparison) cycles(db *gorm.DB, headID, baseID uint) error {
-	head, err := cycles(db, headID)
+	head, err := Cycles(db, headID)
 	if err != nil {
 		return err
 	}
-	base, err := cycles(db, baseID)
+	base, err := Cycles(db, baseID)
 	if err != nil {
 		return err
 	}

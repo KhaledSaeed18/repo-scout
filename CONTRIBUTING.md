@@ -127,6 +127,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 | `internal/gitanalytics` | Heatmaps, streaks, ownership, largest commits over stored history |
 | `internal/risk` | Hotspots (complexity times change frequency) and knowledge concentration |
 | `internal/coupling` | Change coupling: files that change together, and why |
+| `internal/portfolio` | Rolls every scanned repository up for the portfolio page |
 | `internal/report` | `repo-scout scan` reports in text, JSON and SARIF, and the quality gates |
 | `internal/deps` | Manifest parsers (npm, Go, Cargo, Maven, Composer, pip) |
 | `internal/architecture` | Import extraction and resolution, cycles (Tarjan), dead files, unused folders |
@@ -169,7 +170,7 @@ frontend/src/
 ├── main.tsx          routes; pages are lazy-loaded
 ├── App.tsx           shell: sidebar, mobile menu, page error boundary
 ├── index.css         design tokens (light and dark)
-├── pages/            Overview, Repositories, Settings,
+├── pages/            Overview, Portfolio, Repositories, Settings,
 │   ├── history/      Activity, Commits, Contributors, Knowledge, Branches & tags
 │   ├── code/         Files, Search, Metrics, Hotspots, Duplicates
 │   └── structure/    Architecture, Change coupling, Dependencies

@@ -16,6 +16,7 @@ import type {
   LargestCommit,
   Metrics,
   Ownership,
+  Portfolio,
   RepoListResponse,
   Repository,
   ScanSnapshot,
@@ -49,6 +50,7 @@ const get = <T>(path: string) => request<T>(path)
 export const api = {
   health: () => get<{ status: string }>('/api/health'),
   listRepos: () => get<RepoListResponse>('/api/repositories'),
+  portfolio: () => get<Portfolio>('/api/portfolio'),
   getRepo: (id: number) => get<Repository>(`/api/repositories/${id}`),
   createRepo: (path: string) =>
     request<{ repository: Repository; job: Job }>('/api/repositories', {
@@ -122,6 +124,8 @@ export const wsUrl = () => {
 
 export const useRepos = () =>
   useQuery({ queryKey: ['repos'], queryFn: () => api.listRepos() })
+
+export const usePortfolio = () => useQuery({ queryKey: ['portfolio'], queryFn: () => api.portfolio() })
 
 export const useRepo = (id: number) =>
   useQuery({

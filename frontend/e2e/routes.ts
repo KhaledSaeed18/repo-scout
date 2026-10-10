@@ -14,6 +14,7 @@ export const routes: { path: string; heading: string | RegExp }[] = [
   { path: '/architecture', heading: 'Architecture' },
   { path: '/coupling', heading: 'Change coupling' },
   { path: '/dependencies', heading: 'Dependencies' },
+  { path: '/portfolio', heading: 'Portfolio' },
   { path: '/repositories', heading: 'Repositories' },
   { path: '/settings', heading: 'Settings' },
 ]

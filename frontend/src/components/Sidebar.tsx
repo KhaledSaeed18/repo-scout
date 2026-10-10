@@ -7,6 +7,7 @@ import {
   Gauge,
   GitBranch,
   GitCommitHorizontal,
+  LayoutList,
   Link2,
   Map as MapIcon,
   Package,
@@ -63,6 +64,7 @@ const groups: { label?: string; items: NavItem[] }[] = [
 ]
 
 const footer: NavItem[] = [
+  { to: '/portfolio', label: 'Portfolio', icon: LayoutList },
   { to: '/repositories', label: 'Repositories', icon: FolderGit2 },
   { to: '/settings', label: 'Settings', icon: Settings2 },
 ]

@@ -151,7 +151,7 @@ func Build(db *gorm.DB, repoID uint, opts Options) (Report, error) {
 	}
 	rep.Hotspots = hot.Hotspots
 
-	if rep.Cycles, err = cycles(db, repoID); err != nil {
+	if rep.Cycles, err = Cycles(db, repoID); err != nil {
 		return Report{}, err
 	}
 	if rep.HiddenCoupling, err = coupling.List(db, repoID, coupling.Query{Hidden: true, Limit: top}); err != nil {
@@ -245,8 +245,8 @@ func evaluate(r Report, g Gates) []GateResult {
 	return out
 }
 
-// cycles finds circular folder dependencies and the import that opens each.
-func cycles(db *gorm.DB, repoID uint) ([]Cycle, error) {
+// Cycles finds circular folder dependencies and the import that opens each.
+func Cycles(db *gorm.DB, repoID uint) ([]Cycle, error) {
 	var rows []models.ImportEdge
 	if err := db.Where("repo_id = ?", repoID).Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("load imports: %w", err)

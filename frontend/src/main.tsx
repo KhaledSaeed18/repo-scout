@@ -9,6 +9,7 @@ import App from './App.tsx'
 // Pages load on demand so the first paint does not wait for charts and graphs.
 const Overview = lazy(() => import('./pages/Overview'))
 const Repositories = lazy(() => import('./pages/Repositories'))
+const Portfolio = lazy(() => import('./pages/Portfolio'))
 const Activity = lazy(() => import('./pages/history/Activity'))
 const Commits = lazy(() => import('./pages/history/Commits'))
 const Contributors = lazy(() => import('./pages/history/Contributors'))
@@ -43,6 +44,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route element={<App />}>
               <Route path="/" element={<Overview />} />
+              <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/repositories" element={<Repositories />} />
               <Route path="/activity" element={<Activity />} />
               <Route path="/commits" element={<Commits />} />

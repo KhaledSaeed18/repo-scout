@@ -93,6 +93,8 @@ the graph's detail level, and inspect the architecture findings.
 - Hotspots: complex files that keep changing, over a window you pick
 - Knowledge: bus factor, main author per file and folder, and code whose
   main author has gone inactive
+- Portfolio: every scanned repository side by side, with size, direction
+  since the last scan, bus factor, cycles and hidden dependencies
 - Change coupling: files that change together, with hidden dependencies
   (no import, shared package, test or lockfile to explain them) called out
 - Metrics: cyclomatic complexity, function length, nesting, imports/exports,

@@ -85,6 +85,7 @@ func TestResponsesMatchSpec(t *testing.T) {
 		{"GET", "/api/health", ""},
 		{"GET", "/api/browse?path=" + root, ""},
 		{"GET", "/api/repositories", ""},
+		{"GET", "/api/portfolio", ""},
 		{"GET", "/api/repositories/1", ""},
 		{"GET", "/api/repositories/1/files?sort=loc&limit=2", ""},
 		{"GET", "/api/repositories/1/tree", ""},

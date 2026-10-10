@@ -74,6 +74,18 @@ paths:
               schema: { $ref: "#/components/schemas/BrowseResponse" }
         "400": { $ref: "#/components/responses/Error" }
 
+  /api/portfolio:
+    get:
+      tags: [Repositories]
+      summary: Every scanned repository with its size, direction and risks
+      operationId: portfolio
+      responses:
+        "200":
+          description: One entry per repository that has finished a scan.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Portfolio" }
+
   /api/repositories:
     get:
       tags: [Repositories]
@@ -1101,6 +1113,30 @@ components:
         dupMinLines: { type: integer }
         dupMinSimilarity: { type: number }
         theme: { type: string, enum: [system, light, dark] }
+
+    Portfolio:
+      type: object
+      additionalProperties: false
+      required: [entries, unscanned]
+      properties:
+        unscanned: { type: integer, description: "Repositories still waiting for a first scan." }
+        entries:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [repository, complexity, linesChange, complexityChange, busFactor, inactiveShare, cycles,
+              hiddenDependencies, topHotspot]
+            properties:
+              repository: { $ref: "#/components/schemas/Repository" }
+              complexity: { type: integer }
+              linesChange: { type: integer, nullable: true, description: "Change between the last two scans." }
+              complexityChange: { type: integer, nullable: true }
+              busFactor: { type: integer }
+              inactiveShare: { type: number }
+              cycles: { type: integer }
+              hiddenDependencies: { type: integer, description: "Counted up to 500." }
+              topHotspot: { type: string }
 
     BrowseResponse:
       type: object

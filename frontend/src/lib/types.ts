@@ -392,3 +392,24 @@ export interface ScanSnapshot {
   dependencyCount: number
   dupGroupCount: number
 }
+
+export interface PortfolioEntry {
+  repository: Repository
+  complexity: number
+  /** Change between the last two scans; null after a single scan. */
+  linesChange: number | null
+  complexityChange: number | null
+  busFactor: number
+  /** Share of code whose main author went inactive (0..1). */
+  inactiveShare: number
+  cycles: number
+  /** Coupled pairs nothing explains, counted up to 500. */
+  hiddenDependencies: number
+  topHotspot: string
+}
+
+export interface Portfolio {
+  entries: PortfolioEntry[]
+  /** Repositories still waiting for a first scan. */
+  unscanned: number
+}

@@ -79,6 +79,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/openapi.yaml", s.handleOpenAPI)
 	r.Get("/api/ws", s.handleWS)
 	r.Get("/api/browse", s.handleBrowse)
+	r.Get("/api/portfolio", s.handlePortfolio)
 
 	r.Route("/api/repositories", func(r chi.Router) {
 		r.Post("/", s.handleCreateRepo)
