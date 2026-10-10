@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestDefaultsWithDefaults(t *testing.T) {
 	s := Settings{}
@@ -69,5 +73,17 @@ func TestFromEnvAllowedHosts(t *testing.T) {
 	got := FromEnv().AllowedHosts
 	if len(got) != 5 || got[3] != "scout.internal" || got[4] != "box" {
 		t.Fatalf("expected extra hosts appended, got %v", got)
+	}
+}
+
+func TestDefaultDBPathIsPerUser(t *testing.T) {
+	t.Setenv("REPO_SCOUT_DB", "")
+	got := FromEnv().DBPath
+	if !strings.HasSuffix(got, filepath.Join("repo-scout", "reposcout.db")) {
+		t.Fatalf("expected a per-user database path, got %q", got)
+	}
+	t.Setenv("REPO_SCOUT_DB", "/tmp/x.db")
+	if got := FromEnv().DBPath; got != "/tmp/x.db" {
+		t.Fatalf("REPO_SCOUT_DB must override the default, got %q", got)
 	}
 }

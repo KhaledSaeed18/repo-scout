@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -26,11 +27,23 @@ func FromEnv() Runner {
 	return Runner{
 		// Loopback only: the API can list folders and read any repository on disk.
 		Addr:   env("REPO_SCOUT_ADDR", "127.0.0.1:8080"),
-		DBPath: env("REPO_SCOUT_DB", "data/reposcout.db"),
+		DBPath: env("REPO_SCOUT_DB", DefaultDBPath()),
 		// REPO_SCOUT_ALLOWED_HOSTS adds names, comma separated, for example
 		// when the API is reached through a container or tunnel hostname.
 		AllowedHosts: append(LoopbackHosts(), splitList(os.Getenv("REPO_SCOUT_ALLOWED_HOSTS"))...),
 	}
+}
+
+// DefaultDBPath keeps the database in the user's configuration directory
+// (~/Library/Application Support on macOS, ~/.config on Linux, %AppData% on
+// Windows), so the binary can run from any folder. It falls back to the
+// working directory when the system has no such directory.
+func DefaultDBPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return filepath.Join("data", "reposcout.db")
+	}
+	return filepath.Join(dir, "repo-scout", "reposcout.db")
 }
 
 // splitList splits a comma-separated list, dropping blanks.

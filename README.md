@@ -141,26 +141,34 @@ or failed rescan leaves the previous results untouched.
 
 ## Quick start
 
+Build a single binary with the interface built in, then run it:
+
 ```sh
-make dev
+make build
+./bin/repo-scout
 ```
 
-Open http://localhost:5173. The API runs on http://localhost:8080.
+Open http://localhost:8080. Scan results are kept in your user configuration
+folder (`~/Library/Application Support/repo-scout` on macOS, `~/.config/repo-scout`
+on Linux); set `REPO_SCOUT_DB` to keep them elsewhere.
+
+To work on Repo Scout itself, `make dev` runs the API with a hot-reloading
+frontend at http://localhost:5173 and keeps its database in `data/`.
 
 ## Commands
 
 - `make dev`: backend + frontend together
-- `make backend`: build/run the Go API only
+- `make backend`: build/run the Go API only (no embedded interface)
 - `make frontend`: Vite dev server only
 - `make test`: Go tests + frontend typecheck/tests
 - `make lint`: go vet + golangci-lint (if present) + frontend eslint
-- `make build`: production builds
+- `make build`: one `bin/repo-scout` binary with the interface embedded
 
 ## Architecture
 
 ```
 repo-scout/
-├── cmd/api/main.go        # composition root (thin)
+├── cmd/repo-scout/        # composition root (thin)
 ├── internal/
 │   ├── config/            # settings, env/flags, defaults, ignore rules
 │   ├── models/             # GORM models (db schema)
@@ -176,7 +184,10 @@ repo-scout/
 │   ├── analysis/           # orchestrates a scan pipeline (stages)
 │   ├── jobs/               # background job queue, worker pool, pause/resume/cancel
 │   ├── ws/                 # WebSocket hub + event bus
+│   ├── risk/               # hotspots and knowledge concentration
+│   ├── coupling/           # files that change together
 │   ├── api/                # chi router, HTTP handlers, REST + WS endpoints
+│   ├── webui/              # the built frontend, embedded in release builds
 │   └── export/             # CSV/JSON exporters
 ├── frontend/               # React + Vite + TS + Tailwind + shadcn/ui
 ├── brand/                  # logo, icons and social preview sources

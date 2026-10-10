@@ -66,7 +66,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *Server) {
 		t.Fatalf("seed analysis: %v", err)
 	}
 
-	srv := New(db, mgr, hub, repoStore, config.LoopbackHosts())
+	srv := New(Deps{DB: db, Jobs: mgr, Hub: hub, Settings: repoStore, AllowedHosts: config.LoopbackHosts()})
 	ts := httptest.NewServer(srv.Router())
 	t.Cleanup(ts.Close)
 	return ts, srv

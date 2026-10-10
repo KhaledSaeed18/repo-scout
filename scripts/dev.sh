@@ -11,13 +11,13 @@ trap cleanup EXIT INT TERM
 mkdir -p "$ROOT/bin"
 
 echo "[dev] building backend"
-go build -o "$ROOT/bin/api" ./cmd/api
+go build -o "$ROOT/bin/repo-scout" ./cmd/repo-scout
 BACKEND_PID=""
-"$ROOT/bin/api" &
+REPO_SCOUT_DB="${REPO_SCOUT_DB:-$ROOT/data/reposcout.db}" "$ROOT/bin/repo-scout" &
 BACKEND_PID=$!
 
 echo "[dev] starting frontend"
-pnpm --prefix "$ROOT/frontend" run dev &
+(cd "$ROOT/frontend" && pnpm run dev) &
 FRONTEND_PID=$!
 
 wait

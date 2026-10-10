@@ -95,15 +95,54 @@ jobs:
       - name: Build
         run: pnpm run build
 
+  binary:
+    name: Single binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Build the binary with the interface embedded
+        run: make build
+
+      - name: Serve the interface
+        run: |
+          REPO_SCOUT_DB="$RUNNER_TEMP/smoke.db" ./bin/repo-scout &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 0.5; done
+          curl -fs http://127.0.0.1:8080/ | grep -q '<div id="root">'
+          curl -fs http://127.0.0.1:8080/hotspots | grep -q '<div id="root">'
+
   ci:
     name: CI
     if: always()
-    needs: [backend, frontend]
+    needs: [backend, frontend, binary]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [ "${{ needs.backend.result }}" != "success" ] || [ "${{ needs.frontend.result }}" != "success" ]; then
+          if [ "${{ needs.backend.result }}" != "success" ] || [ "${{ needs.frontend.result }}" != "success" ] || [ "${{ needs.binary.result }}" != "success" ]; then
             echo "One or more required jobs failed."
             exit 1
           fi

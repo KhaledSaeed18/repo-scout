@@ -21,13 +21,15 @@ From the repository root:
 - `make test` — Go tests, frontend typecheck + tests.
 - `make lint` — go vet, golangci-lint (if present locally; always enforced in CI),
   frontend oxlint.
-- `make build` — production builds for both halves.
+- `make build` — one `bin/repo-scout` with the frontend embedded (`-tags embedui`).
 
-Frontend commands run with `pnpm --prefix frontend run ...`.
+Frontend commands run with `cd frontend && pnpm run ...`.
 
 ## Layout
 
-- `cmd/api` — thin composition root; wires dependencies, starts the server.
+- `cmd/repo-scout` — thin composition root; wires dependencies, starts the server.
+- `internal/webui` — the built frontend, embedded only when built with
+  `-tags embedui` (see `make build`).
 - `internal/*` — one package per concern. Packages depend on interfaces, not
   each other's internals.
 - `frontend/` — the React app. Pages in `frontend/src/pages`, grouped as the
@@ -105,5 +107,7 @@ Outside contributors work in forks and open pull requests, as described in
 - **Backend**: `gofmt` check, `go vet`, `golangci-lint` (config in
   `.golangci.yml`), `go build ./...`, `go test ./... -race` with coverage.
 - **Frontend**: `pnpm install --frozen-lockfile`, typecheck, lint, test, build.
+- **Single binary**: `make build` with the interface embedded, then a smoke
+  test that the binary serves the API and the interface.
 
-Both must pass before merging.
+All must pass before merging.

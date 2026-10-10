@@ -1,4 +1,5 @@
-// Command api runs the Repo Scout HTTP server.
+// Command repo-scout runs the Repo Scout server: the API, the scan workers
+// and, in release builds, the web interface.
 package main
 
 import (
@@ -17,8 +18,12 @@ import (
 	"github.com/KhaledSaeed18/repo-scout/internal/config"
 	"github.com/KhaledSaeed18/repo-scout/internal/database"
 	"github.com/KhaledSaeed18/repo-scout/internal/jobs"
+	"github.com/KhaledSaeed18/repo-scout/internal/webui"
 	"github.com/KhaledSaeed18/repo-scout/internal/ws"
 )
+
+// version is stamped at build time with -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	cfg := config.FromEnv()
@@ -55,7 +60,11 @@ func main() {
 	runner := analysis.New(db)
 	mgr := jobs.New(db, runner, loadSettings, hub)
 
-	server := api.New(db, mgr, hub, settings, cfg.AllowedHosts)
+	assets, err := webui.Assets()
+	if err != nil {
+		log.Fatalf("load interface: %v", err)
+	}
+	server := api.New(api.Deps{DB: db, Jobs: mgr, Hub: hub, Settings: settings, AllowedHosts: cfg.AllowedHosts, UI: assets})
 	srv := &http.Server{
 		Addr:    cfg.Addr,
 		Handler: server.Router(),
@@ -66,7 +75,7 @@ func main() {
 
 	done := make(chan struct{})
 	go func() {
-		log.Printf("repo-scout listening on %s", cfg.Addr)
+		log.Printf("repo-scout %s listening on http://%s", version, cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("server error: %v", err)
 		}

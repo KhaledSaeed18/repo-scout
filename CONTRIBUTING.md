@@ -50,7 +50,7 @@ issues.
 ```sh
 git clone https://github.com/<you>/repo-scout.git
 cd repo-scout
-pnpm --prefix frontend install
+(cd frontend && pnpm install)
 make dev
 ```
 
@@ -69,17 +69,22 @@ any Git folder; this repository itself is a good first target.
 | `make test` | Go tests, then frontend typecheck and unit tests |
 | `make lint` | `go vet`, golangci-lint if installed, and oxlint |
 | `make fmt` | `gofmt -w` over the Go code |
-| `make build` | Production builds: `bin/api` and `frontend/dist` |
+| `make ui` | Build the frontend and stage it in `internal/webui/dist` for embedding |
+| `make build` | `make ui`, then one `bin/repo-scout` binary with the interface embedded (`-tags embedui`) |
 
 Frontend scripts can also be run directly with
-`pnpm --prefix frontend run <dev|typecheck|test|lint|build>`.
+`cd frontend && pnpm run <dev|typecheck|test|lint|build>`.
+
+Plain `go build` produces an API-only binary, which is what `make dev` uses
+with Vite serving the interface. Only builds tagged `embedui` carry the
+interface, and they need `make ui` first.
 
 ### Configuration
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `REPO_SCOUT_ADDR` | `127.0.0.1:8080` | Where the API listens. Keep it on loopback; the API has no authentication. |
-| `REPO_SCOUT_DB` | `data/reposcout.db` | SQLite database file. Delete it to start from scratch. |
+| `REPO_SCOUT_DB` | `repo-scout/reposcout.db` in the user configuration folder; `data/reposcout.db` under `make dev` | SQLite database file. Delete it to start from scratch. |
 | `REPO_SCOUT_ALLOWED_HOSTS` | (none) | Extra host names the API answers to, comma separated. `localhost`, `127.0.0.1` and `::1` are always allowed. |
 
 User preferences (ignored folders, size limits, workers, duplicate thresholds,
@@ -103,7 +108,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 
 | Package | Responsibility |
 | --- | --- |
-| `cmd/api` | Composition root: reads config, opens the database, wires dependencies, starts the server and worker pool. Keep it thin. |
+| `cmd/repo-scout` | Composition root: reads config, opens the database, wires dependencies, starts the server and worker pool. Keep it thin. |
 | `internal/config` | Environment config and user settings with defaults and validation |
 | `internal/database` | Opening the SQLite database, schema migrations, clearing and promoting scan results; settings store |
 | `internal/models` | GORM models shared by all packages |
@@ -123,6 +128,7 @@ browser ──HTTP/WS──▶ Vite proxy ──▶ chi router (internal/api)
 | `internal/search` | Filename, folder and extension queries and FTS5 content search |
 | `internal/export` | CSV and JSON exports |
 | `internal/ws` | WebSocket hub that broadcasts job and repository events |
+| `internal/webui` | The built frontend, embedded only in `embedui` builds |
 
 ### A scan, end to end
 
@@ -227,10 +233,8 @@ gofmt -l .                     # must print nothing
 go vet ./...
 golangci-lint run ./...
 go test ./... -race
-pnpm --prefix frontend run typecheck
-pnpm --prefix frontend run lint
-pnpm --prefix frontend run test
-pnpm --prefix frontend run build
+(cd frontend && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build)
+make build                     # the embedded single binary still compiles
 ```
 
 What to test:

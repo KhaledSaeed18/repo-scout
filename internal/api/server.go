@@ -4,6 +4,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"mime"
 	"net"
 	"net/http"
@@ -30,22 +31,36 @@ type Server struct {
 	hub          *ws.Hub
 	settings     *database.SettingsStore
 	allowedHosts map[string]bool
+	ui           fs.FS
 }
 
-// New builds the server. It answers only requests whose Host is one of
-// allowedHosts (ports ignored).
-func New(db *gorm.DB, mgr *jobs.Manager, hub *ws.Hub, settings *database.SettingsStore, allowedHosts []string) *Server {
-	hosts := make(map[string]bool, len(allowedHosts))
-	for _, h := range allowedHosts {
+// Deps is what the server needs.
+type Deps struct {
+	DB       *gorm.DB
+	Jobs     *jobs.Manager
+	Hub      *ws.Hub
+	Settings *database.SettingsStore
+	// AllowedHosts are the Host names the server answers to (ports ignored).
+	AllowedHosts []string
+	// UI is the built frontend to serve, or nil to serve the API alone.
+	UI fs.FS
+}
+
+// New builds the server.
+func New(d Deps) *Server {
+	hosts := make(map[string]bool, len(d.AllowedHosts))
+	for _, h := range d.AllowedHosts {
 		hosts[strings.ToLower(strings.Trim(h, "[]"))] = true
 	}
-	return &Server{db: db, jobs: mgr, hub: hub, settings: settings, allowedHosts: hosts}
+	return &Server{db: d.DB, jobs: d.Jobs, hub: d.Hub, settings: d.Settings, allowedHosts: hosts, ui: d.UI}
 }
 
 // Router assembles the chi router with all routes.
 func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(s.allowHosts)
+	r.Use(securityHeaders)
+	r.Use(middleware.GetHead)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -98,6 +113,9 @@ func (s *Server) Router() http.Handler {
 		r.Put("/", s.handlePutSettings)
 	})
 
+	if s.ui != nil {
+		r.Get("/*", spa(s.ui))
+	}
 	return r
 }
 
