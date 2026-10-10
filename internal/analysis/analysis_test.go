@@ -177,6 +177,47 @@ func TestRunPipeline(t *testing.T) {
 	}
 }
 
+func TestFailedRescanKeepsPreviousResults(t *testing.T) {
+	db := testDB(t)
+	root := makeFixture(t)
+	repo := models.Repository{Name: "demo", Path: root}
+	if err := db.Create(&repo).Error; err != nil {
+		t.Fatal(err)
+	}
+	r := New(db)
+	if err := r.Run(context.Background(), repo.ID, 1, &reporter{}, config.Defaults()); err != nil {
+		t.Fatalf("first scan: %v", err)
+	}
+	var before int64
+	db.Model(&models.File{}).Where("repo_id = ?", repo.ID).Count(&before)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := r.Run(ctx, repo.ID, 2, &cancelledReporter{}, config.Defaults()); err == nil {
+		t.Fatal("expected the cancelled rescan to fail")
+	}
+
+	db.First(&repo, repo.ID)
+	if repo.Status != models.RepoReady {
+		t.Fatalf("expected repo back to ready, got %s", repo.Status)
+	}
+	var after int64
+	db.Model(&models.File{}).Where("repo_id = ?", repo.ID).Count(&after)
+	if after != before || after == 0 {
+		t.Fatalf("expected %d files kept, got %d", before, after)
+	}
+	var staged int64
+	db.Model(&models.File{}).Where("repo_id = ?", database.StagingID(repo.ID)).Count(&staged)
+	if staged != 0 {
+		t.Fatalf("expected staged rows dropped, got %d", staged)
+	}
+}
+
+// cancelledReporter fails every checkpoint the way a cancelled job does.
+type cancelledReporter struct{ reporter }
+
+func (r *cancelledReporter) Checkpoint(ctx context.Context) error { return ctx.Err() }
+
 func TestRunPipelineNonGit(t *testing.T) {
 	db := testDB(t)
 	root := t.TempDir()

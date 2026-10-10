@@ -35,6 +35,11 @@ func main() {
 	if err := database.Migrate(db); err != nil {
 		log.Fatalf("migrate database: %v", err)
 	}
+	// Scans that stopped with the process left staged rows behind; they are
+	// re-queued and start over, so the partial results are dropped.
+	if err := database.ClearStagingData(db); err != nil {
+		log.Fatalf("clear unfinished scans: %v", err)
+	}
 
 	settings := database.NewSettingsStore(db)
 	hub := ws.New()

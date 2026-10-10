@@ -79,6 +79,9 @@ func (s *Server) handleDeleteRepo(w http.ResponseWriter, r *http.Request) {
 		if err := database.ClearRepoData(tx, id); err != nil {
 			return err
 		}
+		if err := database.ClearRepoData(tx, database.StagingID(id)); err != nil {
+			return err
+		}
 		if err := tx.Where("repo_id = ?", id).Delete(&models.Job{}).Error; err != nil {
 			return err
 		}

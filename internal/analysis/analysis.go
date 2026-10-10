@@ -41,6 +41,10 @@ var manifestNames = []string{
 
 // Run scans the repository identified by repoID. It reports progress through
 // rep and honors pause/cancel through rep.Checkpoint and ctx.
+//
+// Results are written under a staging ID and swapped in only when every stage
+// succeeds, so a rescan that fails or is cancelled leaves the previous
+// results in place.
 func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter, settings config.Settings) error {
 	var repo models.Repository
 	if err := r.db.First(&repo, repoID).Error; err != nil {
@@ -49,11 +53,14 @@ func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter,
 	if err := r.db.Model(&repo).Update("status", models.RepoScanning).Error; err != nil {
 		return err
 	}
-	root := repo.Path
-	if err := database.ClearRepoData(r.db, repoID); err != nil {
+	// work is the repository as the stages see it: same folder, staging ID.
+	work := repo
+	work.ID = database.StagingID(repo.ID)
+	if err := database.ClearRepoData(r.db, work.ID); err != nil {
 		return err
 	}
 
+	root := repo.Path
 	read := func(rel string) (string, error) {
 		data, err := os.ReadFile(filepath.Join(root, rel))
 		return string(data), err
@@ -63,37 +70,67 @@ func (r *Runner) Run(ctx context.Context, repoID, jobID uint, rep jobs.Reporter,
 		name string
 		fn   func() error
 	}{
-		{"git metadata", func() error { return r.gitMeta(ctx, &repo) }},
+		{"git metadata", func() error { return r.gitMeta(ctx, &work) }},
 		{"scanning files", func() error {
-			return r.fileScan(ctx, &repo, settings, rep, 1, stageCount)
+			return r.fileScan(ctx, &work, settings, rep, 1, stageCount)
 		}},
-		{"git history", func() error { return r.gitHistory(ctx, &repo, rep, read) }},
-		{"dependencies", func() error { return r.dependencies(ctx, &repo, read) }},
-		{"import graph", func() error { return r.importGraph(ctx, &repo, read) }},
-		{"duplicates", func() error { return r.duplicates(ctx, &repo, settings, read) }},
-		{"content index", func() error { return r.contentIndex(ctx, &repo, read) }},
+		{"git history", func() error { return r.gitHistory(ctx, &work, rep, read) }},
+		{"dependencies", func() error { return r.dependencies(ctx, &work, read) }},
+		{"import graph", func() error { return r.importGraph(ctx, &work, read) }},
+		{"duplicates", func() error { return r.duplicates(ctx, &work, settings, read) }},
+		{"content index", func() error { return r.contentIndex(ctx, &work, read) }},
 	}
 
 	for i, st := range stages {
 		if err := r.runStage(ctx, rep, i, len(stages), st.name, st.fn); err != nil {
-			r.db.Model(&models.Repository{}).Where("id = ?", repo.ID).
-				Updates(map[string]any{"status": models.RepoFailed, "updated_at": time.Now()})
+			r.abandon(&repo)
 			return err
 		}
 	}
-
-	if err := r.updateSummary(repo.ID); err != nil {
-		return err
-	}
-	now := time.Now()
-	if err := r.db.Model(&models.Repository{}).Where("id = ?", repo.ID).Updates(map[string]any{
-		"status":          models.RepoReady,
-		"last_scanned_at": now,
-		"updated_at":      now,
-	}).Error; err != nil {
+	if err := r.promote(&repo, &work); err != nil {
+		r.abandon(&repo)
 		return err
 	}
 	return nil
+}
+
+// promote swaps the staged results in and marks the repository ready, in one
+// transaction so readers see either the old scan or the new one.
+func (r *Runner) promote(repo, work *models.Repository) error {
+	summary, err := r.summary(work.ID)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	summary["git_remote"] = work.GitRemote
+	summary["head_commit"] = work.HeadCommit
+	summary["default_branch"] = work.DefaultBranch
+	summary["status"] = models.RepoReady
+	summary["last_scanned_at"] = now
+	summary["updated_at"] = now
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&models.Repository{}).Where("id = ?", repo.ID).Updates(summary)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return fmt.Errorf("repository %d was removed during the scan", repo.ID)
+		}
+		return database.PromoteRepoData(tx, work.ID, repo.ID)
+	})
+}
+
+// abandon drops a failed scan's staged rows and puts the repository back to
+// how it was: ready if an earlier scan's results are still there, failed if
+// it has never been scanned.
+func (r *Runner) abandon(repo *models.Repository) {
+	_ = database.ClearRepoData(r.db, database.StagingID(repo.ID))
+	status := models.RepoFailed
+	if repo.LastScannedAt != nil {
+		status = models.RepoReady
+	}
+	r.db.Model(&models.Repository{}).Where("id = ?", repo.ID).
+		Updates(map[string]any{"status": status, "updated_at": time.Now()})
 }
 
 func (r *Runner) runStage(ctx context.Context, rep jobs.Reporter, idx, count int, name string, fn func() error) error {
@@ -123,17 +160,7 @@ func (r *Runner) gitMeta(ctx context.Context, repo *models.Repository) error {
 	if err != nil {
 		return err
 	}
-	if err := r.db.Model(&models.Repository{}).Where("id = ?", repo.ID).Updates(map[string]any{
-		"git_remote": m.Remote, "head_commit": m.Head, "default_branch": m.DefaultBranch,
-	}).Error; err != nil {
-		return err
-	}
-	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Branch{}).Error; err != nil {
-		return err
-	}
-	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Tag{}).Error; err != nil {
-		return err
-	}
+	repo.GitRemote, repo.HeadCommit, repo.DefaultBranch = m.Remote, m.Head, m.DefaultBranch
 	for i := range branches {
 		branches[i].RepoID = repo.ID
 	}
@@ -214,12 +241,6 @@ func (r *Runner) gitHistory(ctx context.Context, repo *models.Repository, rep jo
 	}
 
 	// Contributors rollup.
-	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.Contributor{}).Error; err != nil {
-		return err
-	}
-	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.FileOwnership{}).Error; err != nil {
-		return err
-	}
 	if len(contrib) > 0 {
 		rows := make([]models.Contributor, 0, len(contrib))
 		for _, cs := range contrib {
@@ -339,9 +360,6 @@ func (r *Runner) importGraph(ctx context.Context, repo *models.Repository, read 
 	if err != nil {
 		return err
 	}
-	if err := r.db.Where("repo_id = ?", repo.ID).Delete(&models.ImportEdge{}).Error; err != nil {
-		return err
-	}
 	if len(rep.Edges) > 0 {
 		edges := make([]models.ImportEdge, 0, len(rep.Edges))
 		for _, e := range rep.Edges {
@@ -404,7 +422,9 @@ func (r *Runner) contentIndex(ctx context.Context, repo *models.Repository, read
 	return search.New(r.db).Reindex(ctx, repo.ID, repo.Path, files, read)
 }
 
-func (r *Runner) updateSummary(repoID uint) error {
+// summary rolls up the repository-level totals from the rows stored under
+// repoID.
+func (r *Runner) summary(repoID uint) (map[string]any, error) {
 	var (
 		fileCount, loc, code, comments, blank int
 		size                                  int64
@@ -413,17 +433,26 @@ func (r *Runner) updateSummary(repoID uint) error {
 		COALESCE(SUM(lines_comment),0), COALESCE(SUM(lines_blank),0), COALESCE(SUM(size),0)
 		FROM files WHERE repo_id = ?`, repoID).Row().Scan(&fileCount, &loc, &code, &comments, &blank, &size)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("file totals: %w", err)
 	}
-	var commits, contributors, deps, dupGroups int64
-	r.db.Model(&models.Commit{}).Where("repo_id = ?", repoID).Count(&commits)
-	r.db.Model(&models.Contributor{}).Where("repo_id = ?", repoID).Count(&contributors)
-	r.db.Model(&models.Dependency{}).Where("repo_id = ?", repoID).Count(&deps)
-	r.db.Model(&models.DuplicateGroup{}).Where("repo_id = ?", repoID).Count(&dupGroups)
-	return r.db.Model(&models.Repository{}).Where("id = ?", repoID).Updates(map[string]any{
-		"file_count": fileCount, "total_loc": loc, "total_code": code,
-		"total_comments": comments, "total_blank": blank, "total_size": size,
-		"commit_count": commits, "contributor_count": contributors,
-		"dependency_count": deps, "dup_group_count": dupGroups,
-	}).Error
+	counts := map[string]any{}
+	for col, model := range map[string]any{
+		"commit_count":      &models.Commit{},
+		"contributor_count": &models.Contributor{},
+		"dependency_count":  &models.Dependency{},
+		"dup_group_count":   &models.DuplicateGroup{},
+	} {
+		var n int64
+		if err := r.db.Model(model).Where("repo_id = ?", repoID).Count(&n).Error; err != nil {
+			return nil, fmt.Errorf("count %s: %w", col, err)
+		}
+		counts[col] = n
+	}
+	counts["file_count"] = fileCount
+	counts["total_loc"] = loc
+	counts["total_code"] = code
+	counts["total_comments"] = comments
+	counts["total_blank"] = blank
+	counts["total_size"] = size
+	return counts, nil
 }

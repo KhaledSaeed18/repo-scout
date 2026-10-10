@@ -110,10 +110,19 @@ func ensureFileFTS(db *gorm.DB) error {
 	return nil
 }
 
-// ClearRepoData removes every analysis row and index entry for a repository.
-// It is called before a rescan so runs are idempotent.
-func ClearRepoData(db *gorm.DB, repoID uint) error {
-	tables := []any{
+// stagingOffset separates the IDs scans stage their results under from real
+// repository IDs. Analysis tables carry a repo_id but no foreign key, so a
+// scan can write under a private ID and swap the rows in once it succeeds.
+const stagingOffset uint = 1 << 40
+
+// StagingID is the repository ID a scan of repoID writes its results under
+// until they are complete. Readers keep seeing the previous results until
+// PromoteRepoData moves the staged rows into place.
+func StagingID(repoID uint) uint { return repoID + stagingOffset }
+
+// repoTables lists every table holding per-repository analysis rows.
+func repoTables() []any {
+	return []any{
 		&models.File{},
 		&models.Commit{},
 		&models.Branch{},
@@ -125,13 +134,49 @@ func ClearRepoData(db *gorm.DB, repoID uint) error {
 		&models.DuplicateGroup{},
 		&models.DuplicateBlock{},
 	}
-	for _, t := range tables {
+}
+
+// ClearRepoData removes every analysis row and index entry for a repository.
+func ClearRepoData(db *gorm.DB, repoID uint) error {
+	for _, t := range repoTables() {
 		if err := db.Where("repo_id = ?", repoID).Delete(t).Error; err != nil {
 			return fmt.Errorf("clear %T: %w", t, err)
 		}
 	}
 	if err := db.Exec("DELETE FROM file_fts WHERE repo_id = ?", repoID).Error; err != nil {
 		return fmt.Errorf("clear fts: %w", err)
+	}
+	return nil
+}
+
+// ClearStagingData removes results left behind by scans that never finished,
+// for example because the process stopped mid-scan. Call it before workers
+// start.
+func ClearStagingData(db *gorm.DB) error {
+	for _, t := range repoTables() {
+		if err := db.Where("repo_id >= ?", stagingOffset).Delete(t).Error; err != nil {
+			return fmt.Errorf("clear staged %T: %w", t, err)
+		}
+	}
+	if err := db.Exec("DELETE FROM file_fts WHERE repo_id >= ?", stagingOffset).Error; err != nil {
+		return fmt.Errorf("clear staged fts: %w", err)
+	}
+	return nil
+}
+
+// PromoteRepoData replaces the results of repository to with the rows staged
+// under from. Run it inside a transaction so readers never see a mix.
+func PromoteRepoData(tx *gorm.DB, from, to uint) error {
+	if err := ClearRepoData(tx, to); err != nil {
+		return err
+	}
+	for _, t := range repoTables() {
+		if err := tx.Model(t).Where("repo_id = ?", from).Update("repo_id", to).Error; err != nil {
+			return fmt.Errorf("promote %T: %w", t, err)
+		}
+	}
+	if err := tx.Exec("UPDATE file_fts SET repo_id = ? WHERE repo_id = ?", to, from).Error; err != nil {
+		return fmt.Errorf("promote fts: %w", err)
 	}
 	return nil
 }

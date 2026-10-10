@@ -119,7 +119,9 @@ Heatmaps, streaks and metric rollups are computed from the stored results
 when a page asks for them. Jobs are queued, run through a worker pool, and
 persist their state: pause, resume, and cancel are state changes, a
 repository never runs two scans at once, and a scan interrupted by a crash
-is re-queued and starts over on the next launch.
+is re-queued and starts over on the next launch. A rescan builds its results
+on the side and swaps them in only when every stage succeeds, so a cancelled
+or failed rescan leaves the previous results untouched.
 
 ## Requirements
 

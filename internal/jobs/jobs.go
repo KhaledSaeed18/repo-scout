@@ -106,8 +106,9 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 // recover marks stale in-flight jobs as interrupted and re-queues them so
-// work continues after a crash. Repositories stuck in "scanning" are flagged
-// failed so they can be rescanned.
+// work continues after a crash. Repositories stuck in "scanning" go back to
+// ready when an earlier scan's results are still in place, and are flagged
+// failed when they were never scanned.
 func (m *Manager) recover() error {
 	now := time.Now()
 	// Jobs the user was cancelling are finished, never resumed.
@@ -129,8 +130,14 @@ func (m *Manager) recover() error {
 	if err != nil {
 		return err
 	}
+	err = m.db.Model(&models.Repository{}).
+		Where("status = ? AND last_scanned_at IS NOT NULL", models.RepoScanning).
+		Updates(map[string]any{"status": models.RepoReady, "updated_at": now}).Error
+	if err != nil {
+		return err
+	}
 	return m.db.Model(&models.Repository{}).
-		Where("status = ?", "scanning").
+		Where("status = ?", models.RepoScanning).
 		Updates(map[string]any{"status": models.RepoFailed, "updated_at": now}).Error
 }
 
