@@ -359,21 +359,40 @@ project's [MIT License](LICENSE).
 
 ## Releases
 
-Releases are cut by the maintainer from `main` by pushing a semantic version
-tag:
+Releases follow [Semantic Versioning](https://semver.org); the README's
+[Versioning](README.md#versioning) section lists what counts as the public
+interface. They are published on GitHub only, from `main`, by the
+maintainer.
 
-```sh
-git tag -a v1.2.0 -m "v1.2.0"
-git push origin v1.2.0
-```
+**Changelog.** Every user-visible change adds a line under `## [Unreleased]`
+in [`CHANGELOG.md`](CHANGELOG.md), in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) sections (Added,
+Changed, Deprecated, Removed, Fixed, Security), written for users rather than
+as commit subjects. The changelog is the release notes.
 
-`.github/workflows/release.yml` then runs the tests, builds binaries for
-macOS, Linux and Windows (amd64 and arm64) with GoReleaser
-(`.goreleaser.yaml`), publishes them with checksums and a changelog grouped
-from the conventional commits, pushes a multi-platform image to
-`ghcr.io/khaledsaeed18/repo-scout`, and attests the provenance of every
-artifact. Tags with a suffix such as `v1.2.0-rc.1` are published as
-prereleases and do not move the `latest` image.
+**Cutting a release:**
 
-To try the release build locally: `goreleaser release --snapshot --clean`, or
-`docker build -t repo-scout .` for the image.
+1. Move the `[Unreleased]` entries under a new `## [X.Y.Z] - YYYY-MM-DD`
+   heading, add an opening paragraph, update the comparison links at the
+   bottom, and commit as `docs(changelog): release X.Y.Z`.
+2. Optionally rehearse: run the **Release** workflow by hand with the version.
+   It builds every artifact without publishing and keeps them as a workflow
+   artifact.
+3. Tag and push:
+
+   ```sh
+   git tag -a vX.Y.Z -m "Repo Scout vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+`.github/workflows/release.yml` then takes the notes from the changelog
+(failing if the section is missing), runs the tests, and has GoReleaser
+(`.goreleaser.yaml`) build archives for macOS, Linux and Windows on amd64
+and arm64 with checksums and an SPDX SBOM per archive. It smoke-tests the
+Linux binary, publishes the release with install and verification steps, and
+signs the build provenance of every archive. Tags with a suffix such as
+`vX.Y.Z-rc.1` are published as prereleases.
+
+To build the release artifacts locally: `goreleaser release --snapshot
+--clean`. No container image is published; `docker build -t repo-scout .`
+builds one from the `Dockerfile`.

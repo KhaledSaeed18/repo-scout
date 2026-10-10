@@ -2,12 +2,17 @@
 
 ## Supported versions
 
-Security fixes land on `main` and ship in the next release. Only the latest
-release is supported; please make sure an issue still reproduces there or on
-`main` before reporting it.
+| Version | Supported |
+| --- | --- |
+| 1.x (latest release) | Yes |
+| Earlier releases | No |
 
-Release archives and container images carry build provenance signed by the
-release workflow. Check a download with
+Security fixes land on `main` and ship in a patch release of the latest
+version. Please make sure an issue still reproduces on the latest release or
+on `main` before reporting it.
+
+Release archives carry checksums, an SPDX software bill of materials and
+build provenance signed by the release workflow. Check a download with
 `gh attestation verify <file> --repo KhaledSaeed18/repo-scout`.
 
 ## Reporting a vulnerability
@@ -17,7 +22,8 @@ Please report vulnerabilities privately, not in public issues or pull requests.
 1. Open a [private vulnerability report](https://github.com/KhaledSaeed18/repo-scout/security/advisories/new).
    Only the maintainer can see it.
 2. Include what an attacker can do, the steps or a proof of concept, the
-   commit you tested, and your operating system and browser if relevant.
+   version you tested (`repo-scout version`, or the commit if you built from
+   source), and your operating system and browser if relevant.
 
 You can expect an acknowledgement within a week. Once a fix is ready, it is
 released on `main` and the advisory is published with credit to you, unless

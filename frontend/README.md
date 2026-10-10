@@ -12,6 +12,7 @@ pnpm run typecheck  # tsc in strict mode
 pnpm run test       # Vitest unit tests for src/lib
 pnpm run lint       # oxlint
 pnpm run build      # typecheck + production build into dist/
+pnpm run e2e        # Playwright against ../bin/repo-scout (build it first: make build)
 ```
 
 From the repository root, `make dev` runs the API and this app together.
@@ -25,11 +26,12 @@ src/
 ├── index.css             # design tokens for light and dark themes
 ├── pages/
 │   ├── Overview.tsx
+│   ├── Portfolio.tsx     # every scanned repository side by side
 │   ├── Repositories.tsx  # add, rescan, remove; scan history
 │   ├── Settings.tsx
-│   ├── history/          # Activity, Commits, Contributors, Branches & tags
-│   ├── code/             # Files, Search, Metrics, Duplicates
-│   └── structure/        # Architecture, Dependencies
+│   ├── history/          # Activity, Commits, Contributors, Knowledge, Branches & tags
+│   ├── code/             # Files, Search, Metrics, Hotspots, Duplicates
+│   └── structure/        # Architecture, Change coupling, Dependencies
 ├── components/
 │   ├── layout.tsx        # PageHeader, Section
 │   ├── states.tsx        # Loading, ErrorNotice, Empty, QueryView
@@ -38,7 +40,7 @@ src/
 └── lib/
     ├── api.ts            # fetch client and TanStack Query hooks
     ├── ws.ts             # live updates from the job WebSocket
-    ├── types.ts          # API contracts
+    ├── types.ts          # API types, mirroring internal/api/openapi.yaml
     └── *.ts / *.test.ts  # pure helpers with unit tests
 ```
 

@@ -14,6 +14,7 @@ Local-first analytics for any Git repository.</p>
   <img src="https://shieldcn.dev/badge/mode-local--first-3346d3.svg?variant=secondary" alt="Mode: local-first" />
   <a href="LICENSE"><img src="https://shieldcn.dev/badge/license-MIT-3346d3.svg?variant=secondary" alt="License: MIT" /></a>
   <a href="https://github.com/KhaledSaeed18/repo-scout/actions/workflows/ci.yml"><img src="https://shieldcn.dev/github/ci/KhaledSaeed18/repo-scout.svg?workflow=ci.yml&branch=main&variant=secondary" alt="CI status" /></a>
+  <a href="https://github.com/KhaledSaeed18/repo-scout/releases/latest"><img src="https://shieldcn.dev/github/release/KhaledSaeed18/repo-scout.svg?variant=secondary" alt="Latest release" /></a>
 </p>
 
 </div>
@@ -21,7 +22,7 @@ Local-first analytics for any Git repository.</p>
 Repo Scout scans any Git repository on disk and turns it into an interactive
 dashboard: architecture graphs, code quality metrics, dependency trees,
 commit history, contributor activity, and duplicate code, all computed
-locally and kept in a SQLite file next to it.
+locally and kept in a local SQLite database.
 
 There is no upload step and no account. You give it a path, it walks the
 tree and the git log, and the result is a set of pages you can actually
@@ -112,6 +113,8 @@ reveals files that change together, including hidden dependencies.
 - Background jobs with pause / resume / cancel, queue, worker pool, progress,
   and crash recovery
 - Live WebSocket updates
+- Command line for CI: text, JSON and SARIF reports, quality gates, and a
+  comparison against a base ref for pull requests
 - CSV/JSON export of files, commits and contributors
 - Light, dark, or system theme
 
@@ -145,47 +148,78 @@ or failed rescan leaves the previous results untouched. Rescans also reuse
 what the last scan learned from history and ask git to diff only the commits
 it has not seen, so they get cheaper as history grows.
 
-## Requirements
-
-- Go 1.26+
-- Node 22.13+ and pnpm 11+
-- `git` on PATH (used for history analysis)
-- Make
-
 ## Install
 
-- **Download a binary** for macOS, Linux or Windows from the
-  [releases page](https://github.com/KhaledSaeed18/repo-scout/releases), unpack
-  it and run `./repo-scout`. Each archive carries a signed build provenance:
-  `gh attestation verify <archive> --repo KhaledSaeed18/repo-scout`.
-- **Run the container**, mounting the folders to scan read-only:
+Repo Scout is a single binary with the web interface built in. It needs
+[Git](https://git-scm.com) on your `PATH` and nothing else.
 
-  ```sh
-  docker run --rm -p 127.0.0.1:8080:8080 \
-    -v repo-scout-data:/data -v "$HOME/code:/repos:ro" \
-    ghcr.io/khaledsaeed18/repo-scout
-  ```
+Download the archive for your system from the
+[latest release](https://github.com/KhaledSaeed18/repo-scout/releases/latest)
+and unpack it, or let the GitHub CLI pick the latest one:
 
-  Then add folders under `/repos` from http://localhost:8080. Publish the port
-  on `127.0.0.1` as shown; the API has no authentication.
-- **Install the command line only** (no interface, for CI):
-  `go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest`.
+```sh
+# macOS on Apple silicon; use darwin_amd64, linux_amd64, linux_arm64,
+# windows_amd64 or windows_arm64 for other systems.
+gh release download --repo KhaledSaeed18/repo-scout --pattern '*_darwin_arm64.tar.gz'
+tar -xzf repo-scout_*_darwin_arm64.tar.gz
+```
+
+The binaries are not code-signed. On macOS, clear the download quarantine
+once with `xattr -d com.apple.quarantine repo-scout`; on Windows, choose
+**More info**, then **Run anyway** the first time.
+
+To check a download, compare it against `checksums.txt` from the same release
+and verify the build provenance signed by the release workflow:
+
+```sh
+gh attestation verify repo-scout_*_darwin_arm64.tar.gz --repo KhaledSaeed18/repo-scout
+```
+
+Each release also lists an SPDX software bill of materials per archive.
+
+**Command line only.** For CI, the command line can be installed with Go 1.26
+or newer; it has every command, without the web interface:
+`go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest`.
+
+**Container.** No image is published. To run Repo Scout in a container,
+build one from the [`Dockerfile`](Dockerfile) and mount the folders to scan
+read-only:
+
+```sh
+docker build -t repo-scout .
+docker run --rm -p 127.0.0.1:8080:8080 \
+  -v repo-scout-data:/data -v "$HOME/code:/repos:ro" repo-scout
+```
+
+Publish the port on `127.0.0.1` as shown; the API has no authentication.
 
 ## Quick start
 
-Build a single binary with the interface built in, then run it:
+1. Run `repo-scout` (`repo-scout.exe` on Windows). It serves the interface at
+   http://localhost:8080.
+2. Open **Repositories**, pick or paste the folder of a Git repository, and
+   start the scan. Progress shows live; a scan of a few thousand files and
+   commits takes seconds.
+3. Explore the pages in the sidebar. Scan again whenever the code changes;
+   every scan is kept, so **Metrics** shows how the numbers move.
 
-```sh
-make build
-./bin/repo-scout
-```
+Stop the server with Ctrl+C. Run `repo-scout --help` for the commands.
 
-Open http://localhost:8080. Scan results are kept in your user configuration
-folder (`~/Library/Application Support/repo-scout` on macOS, `~/.config/repo-scout`
-on Linux); set `REPO_SCOUT_DB` to keep them elsewhere.
+### Configuration
 
-To work on Repo Scout itself, `make dev` runs the API with a hot-reloading
-frontend at http://localhost:5173 and keeps its database in `data/`.
+Repo Scout is configured through environment variables; preferences such as
+ignored folders, limits and the theme are edited on the **Settings** page.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `REPO_SCOUT_ADDR` | `127.0.0.1:8080` | Where the server listens; `repo-scout serve --addr` overrides it. Keep it on loopback. |
+| `REPO_SCOUT_DB` | `repo-scout/reposcout.db` in the user configuration folder | The SQLite database with every scan; `--db` overrides it. |
+| `REPO_SCOUT_ALLOWED_HOSTS` | (none) | Extra host names the server answers to, comma separated, for example behind a container or tunnel. |
+| `REPO_SCOUT_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
+| `REPO_SCOUT_LOG_FORMAT` | `text` | `text`, or `json` for log collectors. |
+
+The user configuration folder is `~/Library/Application Support` on macOS,
+`~/.config` on Linux and `%AppData%` on Windows.
 
 ## Use it in CI
 
@@ -231,7 +265,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - run: go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@latest
+      # Pin the version you have tested.
+      - run: go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@v1.0.0
       - run: repo-scout scan . --format sarif --output repo-scout.sarif --fail-on cycles
         if: github.event_name == 'push'
       # On pull requests, judge the change rather than the whole codebase.
@@ -253,15 +288,51 @@ Everything the interface does goes through a local JSON API, described in
 running instance at http://localhost:8080/api/openapi.yaml. Scripts can use
 it to add repositories, start scans and read every result.
 
-## Commands
+## Versioning
 
-- `make dev`: backend + frontend together
-- `make backend`: build/run the Go API only (no embedded interface)
-- `make frontend`: Vite dev server only
-- `make test`: Go tests + frontend typecheck/tests
-- `make e2e`: Playwright end-to-end tests against the built binary
-- `make lint`: go vet + golangci-lint (if present) + frontend eslint
-- `make build`: one `bin/repo-scout` binary with the interface embedded
+Repo Scout follows [Semantic Versioning](https://semver.org). Its public
+interface is:
+
+- the command line: commands, flags, exit codes and environment variables;
+- the `scan` reports: the JSON fields and the SARIF rule IDs;
+- the HTTP API as described in `internal/api/openapi.yaml`.
+
+Within a major version these only gain additions. Anything else, including
+the database layout and the look of the interface, may change in any
+release. Every change is recorded in the [changelog](CHANGELOG.md).
+
+### Upgrading
+
+Replace the binary and start it again. The database is migrated forward
+automatically on start; it cannot be opened by an older version afterwards,
+so copy the `reposcout.db` file first if you may want to go back. Results
+from earlier scans stay readable, and a rescan fills in anything a new
+version adds.
+
+## Build from source
+
+Building needs Go 1.26+, Node 22.13+ with pnpm 11+, Git and Make:
+
+```sh
+git clone https://github.com/KhaledSaeed18/repo-scout.git
+cd repo-scout
+(cd frontend && pnpm install)
+make build          # bin/repo-scout with the interface embedded
+./bin/repo-scout
+```
+
+For development, `make dev` runs the API with a hot-reloading interface at
+http://localhost:5173 and keeps its database in `data/`.
+
+| Command | What it does |
+| --- | --- |
+| `make dev` | API and frontend together, with hot reload |
+| `make build` | One `bin/repo-scout` binary with the interface embedded |
+| `make check` | Everything CI checks except the browser tests |
+| `make test` | Go tests, then frontend typecheck and unit tests |
+| `make e2e` | Playwright end-to-end tests against the built binary |
+| `make lint` | `go vet`, golangci-lint and oxlint |
+| `make backend` / `make frontend` | Only the API, or only the Vite dev server |
 
 ## Architecture
 
@@ -285,6 +356,7 @@ repo-scout/
 │   ├── ws/                 # WebSocket hub + event bus
 │   ├── risk/               # hotspots and knowledge concentration
 │   ├── coupling/           # files that change together
+│   ├── portfolio/          # every scanned repository side by side
 │   ├── report/             # CLI reports (text, JSON, SARIF) and quality gates
 │   ├── api/                # chi router, HTTP handlers, REST + WS endpoints
 │   ├── webui/              # the built frontend, embedded in release builds
@@ -308,7 +380,8 @@ repo-scout/
 
 ## Contributing
 
-Bug reports, ideas and pull requests are welcome. The
+Bug reports, ideas and pull requests are welcome. Notable changes are
+listed in the [changelog](CHANGELOG.md). The
 [contributing guide](CONTRIBUTING.md) covers setup, how the scan pipeline and
 frontend fit together, the conventions the code follows, and step-by-step
 guides for adding languages, manifest formats and pages. Everyone taking part

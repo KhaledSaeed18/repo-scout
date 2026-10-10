@@ -29,10 +29,11 @@ body:
     attributes:
       label: Area
       options:
-        - Scanning and repositories
-        - History
-        - Code (files, search, metrics, duplicates)
-        - Structure (architecture, dependencies)
+        - Scanning, repositories or portfolio
+        - History and knowledge
+        - Code (files, search, metrics, hotspots, duplicates)
+        - Structure (architecture, change coupling, dependencies)
+        - Command line and CI (reports, quality gates)
         - Language or manifest support
         - Settings, exports or other
     validations:

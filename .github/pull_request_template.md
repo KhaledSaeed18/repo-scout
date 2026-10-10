@@ -16,8 +16,8 @@ Closes #
 
 - [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org) and each one builds and passes tests.
 - [ ] Bug fixes include a test that fails without the fix.
-- [ ] `gofmt -l .` prints nothing, and `go vet ./...`, `golangci-lint run ./...` and `go test ./... -race` pass.
-- [ ] `pnpm --prefix frontend run typecheck`, `lint`, `test` and `build` pass.
-- [ ] API changes are mirrored in `frontend/src/lib/types.ts`.
+- [ ] `make check` passes (gofmt, go vet, golangci-lint, Go tests with `-race`, frontend typecheck, lint and tests), and `make e2e` for interface changes.
+- [ ] API changes are described in `internal/api/openapi.yaml` and mirrored in `frontend/src/lib/types.ts`.
+- [ ] User-visible changes have a line under `[Unreleased]` in `CHANGELOG.md`.
 - [ ] UI changes use the design tokens and page components, and work with the keyboard, at 390px, and in both themes.
 - [ ] Docs (README, CONTRIBUTING, AGENTS.md) are updated if behavior or setup changed.

@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
 
 # Repo Scout as a container: the server with the interface embedded, plus git.
+# No image is published; build and run it locally:
 #
+#   docker build -t repo-scout .
 #   docker run --rm -p 127.0.0.1:8080:8080 \
-#     -v repo-scout-data:/data -v "$HOME/code:/repos:ro" \
-#     ghcr.io/khaledsaeed18/repo-scout
+#     -v repo-scout-data:/data -v "$HOME/code:/repos:ro" repo-scout
 #
 # Then scan folders under /repos from http://localhost:8080.
 

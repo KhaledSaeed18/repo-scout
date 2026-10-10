@@ -35,13 +35,14 @@ body:
       label: Where
       options:
         - Scanning or the Repositories page
-        - Overview
-        - History (Activity, Commits, Contributors, Branches & tags)
+        - Overview or Portfolio
+        - History (Activity, Commits, Contributors, Knowledge, Branches & tags)
         - Files or Search
-        - Metrics or Duplicates
-        - Architecture or Dependencies
+        - Metrics, Hotspots or Duplicates
+        - Architecture, Change coupling or Dependencies
         - Settings
-        - Installing, building or running
+        - Command line (repo-scout scan, reports, quality gates)
+        - Installing, upgrading or running
         - Something else
     validations:
       required: true
@@ -55,22 +56,34 @@ body:
   - type: input
     id: version
     attributes:
-      label: Repo Scout commit
-      description: Output of `git rev-parse --short HEAD` in your Repo Scout checkout.
+      label: Repo Scout version
+      description: Output of `repo-scout version`, or `git rev-parse --short HEAD` if you built from source.
+      placeholder: repo-scout 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you run it
+      options:
+        - Release binary
+        - go install (command line only)
+        - Built from source
+        - Container built from the Dockerfile
     validations:
       required: true
   - type: input
     id: environment
     attributes:
       label: Environment
-      placeholder: macOS 15, Chrome 140, Go 1.26, Node 22
+      placeholder: macOS 15 on Apple silicon, Chrome 140, Git 2.51
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
       label: Logs
-      description: API terminal output or browser console errors, if any.
+      description: The server's terminal output (`REPO_SCOUT_LOG_LEVEL=debug` adds detail) or browser console errors, if any.
       render: shell
     validations:
       required: false
@@ -81,5 +94,5 @@ body:
       options:
         - label: I searched existing issues and this is not a duplicate.
           required: true
-        - label: It still happens on the latest `main`.
+        - label: It still happens on the latest release.
           required: false

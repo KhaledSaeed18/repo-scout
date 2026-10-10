@@ -95,8 +95,15 @@ Outside contributors work in forks and open pull requests, as described in
 - Everything to `main` directly. No branches, no PRs.
 - Push when a feature/unit of work completes.
 - Never rewrite pushed history. Never force-push.
-- Releases are `vX.Y.Z` tags pushed by the maintainer only; the release
-  workflow builds and publishes everything. Never tag without being asked.
+- Every user-visible change adds a line under `## [Unreleased]` in
+  `CHANGELOG.md` (Keep a Changelog), written for users. The changelog is the
+  release notes.
+- Releases are `vX.Y.Z` tags pushed by the maintainer only, after the
+  changelog section exists; the release workflow builds and publishes the
+  GitHub release. Never tag without being asked. See "Releases" in
+  `CONTRIBUTING.md`.
+- Dependabot opens pull requests for dependency updates; they are the one
+  exception to "no PRs" and are squash-merged once CI is green.
 - No co-author trailers, no "Generated with", no mention of AI or tools as
   authors. The human is the sole author of record.
 
