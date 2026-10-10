@@ -32,7 +32,7 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -tags embedui -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
     -o /out/repo-scout ./cmd/repo-scout
 
-FROM alpine:3.22
+FROM alpine:3.24
 # git reads history; mounted repositories belong to another user, so mark
 # them safe or git refuses to read them.
 RUN apk add --no-cache git ca-certificates \
