@@ -314,3 +314,21 @@ func TestAnalyzeHistoryFollowsRenames(t *testing.T) {
 		t.Fatal("expected no history under the old name")
 	}
 }
+
+func TestStreamLogsAppliesMailmap(t *testing.T) {
+	root := makeRepo(t)
+	writeFile(t, root, ".mailmap", "Real Name <real@example.com> Test <test@example.com>\n")
+	var authors []string
+	err := New().StreamLogs(context.Background(), root, func(c models.Commit, _ []FileChange) error {
+		authors = append(authors, c.Author+" <"+c.Email+">")
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	for _, a := range authors {
+		if a != "Real Name <real@example.com>" {
+			t.Fatalf("expected mailmapped identity, got %v", authors)
+		}
+	}
+}

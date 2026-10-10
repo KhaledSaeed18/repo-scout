@@ -141,9 +141,11 @@ func (a *Analyzer) Tags(ctx context.Context, root string) ([]models.Tag, error) 
 // single goroutine in history order; an error from fn stops the stream and
 // is returned.
 func (a *Analyzer) StreamLogs(ctx context.Context, root string, fn func(models.Commit, []FileChange) error) error {
+	// %aN and %aE apply the repository's .mailmap, so one person committing
+	// under several names or addresses counts once.
 	args := []string{
 		"log", "--branches", "--tags", "--remotes", "--numstat", "--date-order",
-		"--pretty=format:%x1e%H%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s%x1e",
+		"--pretty=format:%x1e%H%x1f%aN%x1f%aE%x1f%aI%x1f%P%x1f%s%x1e",
 	}
 	// HEAD may be detached; include it only when it resolves so empty
 	// repositories do not fail.

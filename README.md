@@ -79,7 +79,7 @@ the graph's detail level, and inspect the architecture findings.
   PHP, C#, C++, C, Swift) with LOC / comments / blank-line breakdown
 - Git analytics: commit calendar, hour-of-week punch card, streaks,
   contributors, largest commits, merges, file ownership, branches and tags,
-  all on each author's local clock
+  all on each author's local clock, with identities merged through `.mailmap`
 - Dependency graphs (package.json, go.mod, Cargo.toml, pom.xml, composer.json,
   requirements.txt)
 - Lazy-loaded file tree with per-file size, complexity and history, plus a
