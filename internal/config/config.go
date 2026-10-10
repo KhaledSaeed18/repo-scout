@@ -12,6 +12,9 @@ import (
 type Runner struct {
 	Addr   string
 	DBPath string
+	// LogLevel is debug, info, warn or error; LogFormat is text or json.
+	LogLevel  string
+	LogFormat string
 	// AllowedHosts are the Host header names the API answers to. Anything
 	// else is refused, which stops DNS rebinding: a website pointing its own
 	// domain at 127.0.0.1 still sends its domain as the Host.
@@ -26,8 +29,10 @@ func LoopbackHosts() []string { return []string{"localhost", "127.0.0.1", "::1"}
 func FromEnv() Runner {
 	return Runner{
 		// Loopback only: the API can list folders and read any repository on disk.
-		Addr:   env("REPO_SCOUT_ADDR", "127.0.0.1:8080"),
-		DBPath: env("REPO_SCOUT_DB", DefaultDBPath()),
+		Addr:      env("REPO_SCOUT_ADDR", "127.0.0.1:8080"),
+		DBPath:    env("REPO_SCOUT_DB", DefaultDBPath()),
+		LogLevel:  env("REPO_SCOUT_LOG_LEVEL", "info"),
+		LogFormat: env("REPO_SCOUT_LOG_FORMAT", "text"),
 		// REPO_SCOUT_ALLOWED_HOSTS adds names, comma separated, for example
 		// when the API is reached through a container or tunnel hostname.
 		AllowedHosts: append(LoopbackHosts(), splitList(os.Getenv("REPO_SCOUT_ALLOWED_HOSTS"))...),

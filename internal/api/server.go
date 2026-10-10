@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -32,6 +33,7 @@ type Server struct {
 	settings     *database.SettingsStore
 	allowedHosts map[string]bool
 	ui           fs.FS
+	log          *slog.Logger
 }
 
 // Deps is what the server needs.
@@ -44,6 +46,8 @@ type Deps struct {
 	AllowedHosts []string
 	// UI is the built frontend to serve, or nil to serve the API alone.
 	UI fs.FS
+	// Logger receives one line per request; nil logs nothing.
+	Logger *slog.Logger
 }
 
 // New builds the server.
@@ -52,7 +56,11 @@ func New(d Deps) *Server {
 	for _, h := range d.AllowedHosts {
 		hosts[strings.ToLower(strings.Trim(h, "[]"))] = true
 	}
-	return &Server{db: d.DB, jobs: d.Jobs, hub: d.Hub, settings: d.Settings, allowedHosts: hosts, ui: d.UI}
+	logger := d.Logger
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
+	return &Server{db: d.DB, jobs: d.Jobs, hub: d.Hub, settings: d.Settings, allowedHosts: hosts, ui: d.UI, log: logger}
 }
 
 // Router assembles the chi router with all routes.
@@ -62,7 +70,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(securityHeaders)
 	r.Use(middleware.GetHead)
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Logger)
+	r.Use(s.logRequests)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(requireJSONWrites)
@@ -117,6 +125,35 @@ func (s *Server) Router() http.Handler {
 		r.Get("/*", spa(s.ui))
 	}
 	return r
+}
+
+// logRequests writes one structured line per request. API calls log at info,
+// interface files and health checks at debug, and server errors at error.
+func (s *Server) logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		start := time.Now()
+		next.ServeHTTP(ww, r)
+		status := ww.Status()
+		if status == 0 {
+			status = http.StatusOK
+		}
+		level := slog.LevelInfo
+		switch {
+		case status >= 500:
+			level = slog.LevelError
+		case r.URL.Path == "/api/health" || !strings.HasPrefix(r.URL.Path, "/api/"):
+			level = slog.LevelDebug
+		}
+		s.log.LogAttrs(r.Context(), level, "request",
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.Int("status", status),
+			slog.Int("bytes", ww.BytesWritten()),
+			slog.String("took", time.Since(start).Round(time.Microsecond).String()),
+			slog.String("request_id", middleware.GetReqID(r.Context())),
+		)
+	})
 }
 
 // allowHosts refuses requests addressed to an unknown host name. Without it a

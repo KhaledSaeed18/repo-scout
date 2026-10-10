@@ -1,7 +1,12 @@
 package jobs
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -56,7 +61,7 @@ func (b *blockingRunner) Run(ctx context.Context, repoID, jobID uint, rep Report
 func TestManagerLifecycle(t *testing.T) {
 	db := testDB(t)
 	br := &blockingRunner{started: make(chan struct{}, 1), checkpoint: make(chan struct{})}
-	m := New(db, br, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil)
+	m := New(db, br, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -116,7 +121,7 @@ func TestManagerRecoversInterrupted(t *testing.T) {
 	db.Create(&models.Job{RepoID: 2, Kind: "scan", Status: models.JobInterrupted})
 	db.Create(&models.Repository{Name: "r", Path: "/tmp/x", Status: "scanning"})
 
-	m := New(db, &blockingRunner{}, nil, nil)
+	m := New(db, &blockingRunner{}, nil, nil, nil)
 	if err := m.recover(); err != nil {
 		t.Fatalf("recover: %v", err)
 	}
@@ -135,7 +140,7 @@ func TestManagerRecoversInterrupted(t *testing.T) {
 
 func TestManagerEnqueueCompletion(t *testing.T) {
 	db := testDB(t)
-	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil)
+	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -175,7 +180,7 @@ func (doneRunner) Run(ctx context.Context, repoID, jobID uint, rep Reporter, set
 
 func TestCancelQueuedJob(t *testing.T) {
 	db := testDB(t)
-	m := New(db, &doneRunner{}, nil, nil)
+	m := New(db, &doneRunner{}, nil, nil, nil)
 	job, err := m.Enqueue(1, "scan")
 	if err != nil {
 		t.Fatal(err)
@@ -195,7 +200,7 @@ func TestCancelQueuedJob(t *testing.T) {
 
 func TestCancelFinishedJobIsRejected(t *testing.T) {
 	db := testDB(t)
-	m := New(db, &doneRunner{}, nil, nil)
+	m := New(db, &doneRunner{}, nil, nil, nil)
 	job := models.Job{RepoID: 1, Kind: "scan", Status: models.JobCompleted}
 	db.Create(&job)
 	if err := m.Cancel(job.ID); err == nil {
@@ -214,7 +219,7 @@ func TestRecoverFinishesCancellingJobs(t *testing.T) {
 	db.Create(&job)
 	paused := models.Job{RepoID: 2, Kind: "scan", Status: models.JobPaused}
 	db.Create(&paused)
-	m := New(db, &blockingRunner{}, nil, nil)
+	m := New(db, &blockingRunner{}, nil, nil, nil)
 	if err := m.recover(); err != nil {
 		t.Fatalf("recover: %v", err)
 	}
@@ -248,7 +253,7 @@ func TestFinishedJobAnnouncesRepository(t *testing.T) {
 	repo := models.Repository{Name: "r", Path: "/tmp/r", Status: models.RepoReady}
 	db.Create(&repo)
 	sink := &recordingSink{}
-	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, sink)
+	m := New(db, &doneRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, sink, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -281,7 +286,7 @@ func TestActionsDoNotOverwriteAFinishedJob(t *testing.T) {
 	// The worker has written the final status but not yet unregistered the job.
 	for _, action := range []string{"cancel", "pause"} {
 		db := testDB(t)
-		m := New(db, &doneRunner{}, nil, nil)
+		m := New(db, &doneRunner{}, nil, nil, nil)
 		job := models.Job{RepoID: 1, Kind: "scan", Status: models.JobCompleted}
 		db.Create(&job)
 		m.active[job.ID] = &activeJob{cancel: func() {}, notify: make(chan struct{})}
@@ -299,6 +304,59 @@ func TestActionsDoNotOverwriteAFinishedJob(t *testing.T) {
 		db.First(&j, job.ID)
 		if j.Status != models.JobCompleted {
 			t.Fatalf("%s: finished job was rewritten to %s and would hang", action, j.Status)
+		}
+	}
+}
+
+type failingRunner struct{}
+
+func (failingRunner) Run(context.Context, uint, uint, Reporter, config.Settings) error {
+	return errors.New("disk on fire")
+}
+
+// syncBuffer is a bytes.Buffer safe to write from the worker goroutine.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+func TestFailedJobIsLogged(t *testing.T) {
+	db := testDB(t)
+	var logs syncBuffer
+	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+	m := New(db, failingRunner{}, func() config.Settings { s := config.Defaults(); s.WorkerCount = 1; return s }, nil, logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = m.Start(ctx) }()
+
+	job, err := m.Enqueue(7, "scan")
+	if err != nil {
+		t.Fatalf("enqueue: %v", err)
+	}
+	deadline := time.After(3 * time.Second)
+	for !strings.Contains(logs.String(), `"msg":"job failed"`) {
+		select {
+		case <-deadline:
+			t.Fatalf("no failure logged; logs: %s", logs.String())
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	out := logs.String()
+	for _, want := range []string{`"msg":"job started"`, `"err":"disk on fire"`, fmt.Sprintf(`"job":%d`, job.ID), `"repo":7`, `"took":`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %s in logs: %s", want, out)
 		}
 	}
 }

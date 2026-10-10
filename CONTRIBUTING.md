@@ -86,6 +86,8 @@ interface, and they need `make ui` first.
 | --- | --- | --- |
 | `REPO_SCOUT_ADDR` | `127.0.0.1:8080` | Where the API listens. Keep it on loopback; the API has no authentication. |
 | `REPO_SCOUT_DB` | `repo-scout/reposcout.db` in the user configuration folder; `data/reposcout.db` under `make dev` | SQLite database file. Delete it to start from scratch. |
+| `REPO_SCOUT_LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. Debug adds interface file and health check requests. |
+| `REPO_SCOUT_LOG_FORMAT` | `text` | `text`, or `json` for log collectors. |
 | `REPO_SCOUT_ALLOWED_HOSTS` | (none) | Extra host names the API answers to, comma separated. `localhost`, `127.0.0.1` and `::1` are always allowed. |
 
 User preferences (ignored folders, size limits, workers, duplicate thresholds,

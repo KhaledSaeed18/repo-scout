@@ -57,7 +57,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *Server) {
 	repoStore := database.NewSettingsStore(db)
 	hub := ws.New()
 	load := func() config.Settings { return config.Defaults() }
-	mgr := jobs.New(db, analysis.New(db), load, hub)
+	mgr := jobs.New(db, analysis.New(db), load, hub, nil)
 	repo := models.Repository{Name: "demo", Path: root}
 	if err := db.Create(&repo).Error; err != nil {
 		t.Fatal(err)
@@ -465,3 +465,4 @@ func TestRejectsUnknownHosts(t *testing.T) {
 		}
 	}
 }
+

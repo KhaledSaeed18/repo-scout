@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,7 +45,9 @@ func Open(path string) (*gorm.DB, error) {
 		}
 	}
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
-		Logger: silentLogger{Interface: logger.New(log.New(os.Stderr, "", log.LstdFlags), logger.Config{
+		// Writes through the process's slog default, so database warnings
+		// share the server's log format.
+		Logger: silentLogger{Interface: logger.New(slog.NewLogLogger(slog.Default().Handler(), slog.LevelWarn), logger.Config{
 			// Scans promote and aggregate whole tables at once; only flag
 			// queries slow enough to matter. No color: logs end up in files
 			// and CI output.

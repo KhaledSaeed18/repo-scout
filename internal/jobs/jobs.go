@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -51,6 +52,7 @@ type Manager struct {
 	runner    Runner
 	settings  func() config.Settings
 	eventSink EventSink
+	log       *slog.Logger
 
 	mu     sync.Mutex
 	active map[uint]*activeJob
@@ -67,13 +69,18 @@ type activeJob struct {
 	notify chan struct{}
 }
 
-// New builds a Manager. settings and eventSink may be nil (defaults used).
-func New(db *gorm.DB, runner Runner, settings func() config.Settings, sink EventSink) *Manager {
+// New builds a Manager. settings, eventSink and logger may be nil: defaults
+// are used, events are dropped and nothing is logged.
+func New(db *gorm.DB, runner Runner, settings func() config.Settings, sink EventSink, logger *slog.Logger) *Manager {
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
 	return &Manager{
 		db:        db,
 		runner:    runner,
 		settings:  settings,
 		eventSink: sink,
+		log:       logger,
 		active:    map[uint]*activeJob{},
 		wake:      make(chan struct{}, 1),
 	}
@@ -310,8 +317,8 @@ func (m *Manager) claimNext(ctx context.Context) *models.Job {
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil
+		if !errors.Is(err, gorm.ErrRecordNotFound) && ctx.Err() == nil {
+			m.log.Error("claim job", "err", err)
 		}
 		return nil
 	}
@@ -336,7 +343,11 @@ func (m *Manager) run(job *models.Job) {
 		settings = m.settings()
 	}
 
+	log := m.log.With("job", job.ID, "repo", job.RepoID, "kind", job.Kind)
+	log.Info("job started")
+	started := time.Now()
 	err := m.runner.Run(jctx, job.RepoID, job.ID, rep, settings)
+	took := time.Since(started).Round(time.Millisecond).String()
 
 	var cur models.Job
 	m.db.First(&cur, job.ID)
@@ -347,16 +358,21 @@ func (m *Manager) run(job *models.Job) {
 		final["status"] = models.JobCompleted
 		final["message"] = "completed"
 		final["progress"] = 1
+		log.Info("job completed", "took", took)
 	case cur.Status == models.JobCancelling || errors.Is(err, context.Canceled):
 		final["status"] = models.JobCancelled
 		final["message"] = "cancelled"
 		final["error"] = ""
+		log.Info("job cancelled", "took", took)
 	default:
 		final["status"] = models.JobFailed
 		final["message"] = "failed"
 		final["error"] = err.Error()
+		log.Error("job failed", "took", took, "err", err)
 	}
-	m.db.Model(&models.Job{}).Where("id = ?", job.ID).Updates(final)
+	if err := m.db.Model(&models.Job{}).Where("id = ?", job.ID).Updates(final).Error; err != nil {
+		log.Error("record job result", "err", err)
+	}
 	m.db.First(&cur, job.ID)
 	m.broadcast(&cur)
 
