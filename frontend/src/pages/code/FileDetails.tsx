@@ -1,8 +1,10 @@
 import { FileQuestion } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Empty, QueryView } from '@/components/states'
-import { useFiles } from '@/lib/api'
-import { formatBytes, formatDate, formatNumber, formatRelative } from '@/lib/format'
+import { useCoupling, useFiles } from '@/lib/api'
+import { formatBytes, formatDate, formatNumber, formatPercent, formatRelative } from '@/lib/format'
+import { partnerOf } from '@/lib/risk'
 import type { FileEntry } from '@/lib/types'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -40,6 +42,35 @@ function Composition({ f }: { f: FileEntry }) {
   )
 }
 
+/** Files that keep changing in the same commits as this one. */
+function ChangedWith({ repoId, path }: { repoId: number; path: string }) {
+  const q = useCoupling(repoId, { path, limit: 5 })
+  const pairs = q.data?.pairs ?? []
+  if (!pairs.length) return null
+  return (
+    <div>
+      <h3 className="mb-1.5 text-sm font-medium">Often changed with</h3>
+      <ul className="flex flex-col gap-1.5">
+        {pairs.map((p) => {
+          const other = partnerOf(p, path)
+          return (
+            <li key={other} className="flex items-baseline justify-between gap-3 text-sm">
+              <Link
+                to={`/files?file=${encodeURIComponent(other)}`}
+                className="min-w-0 truncate font-mono text-[0.8125rem] text-primary hover:underline"
+                title={other}
+              >
+                {other}
+              </Link>
+              <span className="shrink-0 tabular-nums text-muted-foreground">{formatPercent(p.degree)}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 function Details({ f }: { f: FileEntry }) {
   const analyzed = f.funcCount > 0 || f.complexity > 0
   return (
@@ -73,6 +104,7 @@ function Details({ f }: { f: FileEntry }) {
         <Row label="First commit">{f.firstCommitAt ? formatDate(f.firstCommitAt) : 'Untracked'}</Row>
         <Row label="Last commit">{f.lastCommitAt ? formatRelative(f.lastCommitAt) : 'Untracked'}</Row>
       </dl>
+      <ChangedWith repoId={f.repoId} path={f.path} />
     </div>
   )
 }

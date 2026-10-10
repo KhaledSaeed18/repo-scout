@@ -157,7 +157,7 @@ function KnowledgePage({ repo }: { repo: Repository }) {
         {(r) =>
           r.files === 0 ? (
             <Empty icon={UserRoundCheck} title="No files with history">
-              Knowledge comes from Git history. Scan a folder that is a Git repository to see who wrote what.
+              Knowledge comes from Git history. Scan a folder that is a Git repository to see who wrote what; repositories scanned before this view existed need a new scan.
             </Empty>
           ) : (
             <>

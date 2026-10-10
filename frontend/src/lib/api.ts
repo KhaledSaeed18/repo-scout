@@ -5,6 +5,7 @@ import type {
   BrowseResponse,
   Commit,
   Contributor,
+  CouplingPair,
   DependenciesResponse,
   DuplicatesResponse,
   FileEntry,
@@ -84,6 +85,13 @@ export const api = {
   metrics: (id: number, limit = 20) => get<Metrics>(`/api/repositories/${id}/metrics?limit=${limit}`),
   hotspots: (id: number, months: number, limit: number) =>
     get<HotspotReport>(`/api/repositories/${id}/hotspots?months=${months}&limit=${limit}`),
+  coupling: (id: number, params: { path?: string; hidden?: boolean; limit?: number }) => {
+    const qs = new URLSearchParams()
+    if (params.path) qs.set('path', params.path)
+    if (params.hidden) qs.set('hidden', 'true')
+    if (params.limit) qs.set('limit', String(params.limit))
+    return get<{ pairs: CouplingPair[] }>(`/api/repositories/${id}/coupling?${qs}`)
+  },
   knowledge: (id: number, depth: number, inactiveMonths: number) =>
     get<KnowledgeReport>(`/api/repositories/${id}/knowledge?depth=${depth}&inactiveMonths=${inactiveMonths}`),
   search: (params: Record<string, string | number | boolean>) => {
@@ -230,6 +238,14 @@ export const useKnowledge = (id: number, depth: number, inactiveMonths: number) 
   useQuery({
     queryKey: ['knowledge', id, depth, inactiveMonths],
     queryFn: () => api.knowledge(id, depth, inactiveMonths),
+    enabled: id > 0,
+    placeholderData: keepPreviousData,
+  })
+
+export const useCoupling = (id: number, params: { path?: string; hidden?: boolean; limit?: number }) =>
+  useQuery({
+    queryKey: ['coupling', id, params],
+    queryFn: () => api.coupling(id, params),
     enabled: id > 0,
     placeholderData: keepPreviousData,
   })

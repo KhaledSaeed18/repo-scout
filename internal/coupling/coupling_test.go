@@ -105,7 +105,7 @@ func TestCoupling(t *testing.T) {
 		byA[p.FileA] = p
 	}
 	imp, ok := byA["src/api.js"]
-	if !ok || imp.FileB != "src/model.js" || imp.Shared != 3 || !imp.Linked {
+	if !ok || imp.FileB != "src/model.js" || imp.Shared != 3 || imp.Link != coupling.LinkImport {
 		t.Fatalf("expected linked api/model pair, got %+v", pairs)
 	}
 	// api.js changed 3 times, model.js 6: 3 shared over an average of 4.5.
@@ -113,7 +113,7 @@ func TestCoupling(t *testing.T) {
 		t.Fatalf("expected degree 2/3, got %v", imp.Degree)
 	}
 	hidden, ok := byA["config/app.json"]
-	if !ok || hidden.Linked {
+	if !ok || hidden.Link != "" {
 		t.Fatalf("expected an unlinked config/model pair, got %+v", pairs)
 	}
 

@@ -1,3 +1,5 @@
+import type { CouplingLink } from './types'
+
 /** Windows offered for counting changes, in months; 0 means all history. */
 export const hotspotWindows = [
   { value: '3', label: 'Last 3 months' },
@@ -33,4 +35,28 @@ export function describeBusFactor(n: number): string {
   if (n === 1) return 'One person is the main author of most of the code.'
   if (n === 2) return 'Two people are the main authors of most of the code.'
   return `Most of the code is spread across ${n} main authors.`
+}
+
+/** Which coupled pairs to list. */
+export const couplingFilters = [
+  { value: 'all', label: 'All pairs' },
+  { value: 'hidden', label: 'Hidden only' },
+]
+
+const linkLabels: Record<CouplingLink, string> = {
+  '': 'Hidden',
+  import: 'Import',
+  package: 'Same package',
+  test: 'Test',
+  lockfile: 'Lockfile',
+}
+
+/** Short label for why a coupled pair changes together. */
+export function linkLabel(link: CouplingLink): string {
+  return linkLabels[link] ?? link
+}
+
+/** The partner of path in a coupled pair. */
+export function partnerOf(pair: { fileA: string; fileB: string }, path: string): string {
+  return pair.fileA === path ? pair.fileB : pair.fileA
 }

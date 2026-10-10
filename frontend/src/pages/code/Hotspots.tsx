@@ -31,7 +31,7 @@ function Ranking({ report }: { report: HotspotReport }) {
   if (!report.hotspots.length) {
     return (
       <Empty icon={Flame} title="No analyzed file changed in this window">
-        Pick a longer window to include older changes.
+        Pick a longer window to include older changes. Repositories scanned before hotspots existed need a new scan.
       </Empty>
     )
   }

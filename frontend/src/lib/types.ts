@@ -361,3 +361,18 @@ export interface KnowledgeReport {
   /** Authors with a commit after this are active. Null without history. */
   activeSince: string | null
 }
+
+export interface CouplingPair {
+  fileA: string
+  fileB: string
+  /** Commits that changed both files. */
+  shared: number
+  revisionsA: number
+  revisionsB: number
+  /** Shared commits over the average of both files' commits; 1 means always together. */
+  degree: number
+  /** Why the pair is expected to change together; empty for a hidden dependency. */
+  link: CouplingLink
+}
+
+export type CouplingLink = '' | 'import' | 'package' | 'test' | 'lockfile'

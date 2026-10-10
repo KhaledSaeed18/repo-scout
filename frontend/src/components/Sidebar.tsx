@@ -7,6 +7,7 @@ import {
   Gauge,
   GitBranch,
   GitCommitHorizontal,
+  Link2,
   Map as MapIcon,
   Package,
   Search,
@@ -55,6 +56,7 @@ const groups: { label?: string; items: NavItem[] }[] = [
     label: 'Structure',
     items: [
       { to: '/architecture', label: 'Architecture', icon: Waypoints },
+      { to: '/coupling', label: 'Change coupling', icon: Link2 },
       { to: '/dependencies', label: 'Dependencies', icon: Package },
     ],
   },

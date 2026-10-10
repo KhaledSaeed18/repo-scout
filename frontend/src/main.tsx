@@ -21,6 +21,7 @@ const Duplicates = lazy(() => import('./pages/code/Duplicates'))
 const Hotspots = lazy(() => import('./pages/code/Hotspots'))
 const Architecture = lazy(() => import('./pages/structure/Architecture'))
 const Dependencies = lazy(() => import('./pages/structure/Dependencies'))
+const Coupling = lazy(() => import('./pages/structure/Coupling'))
 const Settings = lazy(() => import('./pages/Settings'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
@@ -54,6 +55,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/hotspots" element={<Hotspots />} />
               <Route path="/duplicates" element={<Duplicates />} />
               <Route path="/architecture" element={<Architecture />} />
+              <Route path="/coupling" element={<Coupling />} />
               <Route path="/dependencies" element={<Dependencies />} />
               <Route path="/settings" element={<Settings />} />
               {/* Old addresses from before the redesign. */}
