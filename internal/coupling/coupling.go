@@ -29,32 +29,59 @@ const (
 // Compute stores the coupled file pairs of a repository, from the commit
 // files recorded by the history stage. It runs in SQL so memory stays flat
 // however long the history is.
+//
+// The commit-to-file rows are first copied into an indexed temporary table:
+// joining them to themselves straight from a CTE has no index to use and
+// grows with the square of the history (minutes on a few thousand commits).
 func Compute(db *gorm.DB, repoID uint) error {
-	err := db.Exec(`WITH changes AS (
-			SELECT cf.commit_id, cf.path
-			FROM commit_files cf
-			JOIN commits c ON c.id = cf.commit_id
-			JOIN files f ON f.repo_id = cf.repo_id AND f.path = cf.path
-			WHERE cf.repo_id = ? AND c.files_changed BETWEEN 2 AND ?
-		),
-		revisions AS (
-			SELECT path, COUNT(*) AS n FROM changes GROUP BY path
-		),
-		pairs AS (
-			SELECT a.path AS file_a, b.path AS file_b, COUNT(*) AS shared
-			FROM changes a
-			JOIN changes b ON a.commit_id = b.commit_id AND a.path < b.path
-			GROUP BY a.path, b.path
-			HAVING COUNT(*) >= ?
-		)
-		INSERT INTO file_couplings (repo_id, file_a, file_b, shared, revisions_a, revisions_b, degree)
-		SELECT ?, p.file_a, p.file_b, p.shared, ra.n, rb.n, p.shared * 2.0 / (ra.n + rb.n) AS degree
-		FROM pairs p
-		JOIN revisions ra ON ra.path = p.file_a
-		JOIN revisions rb ON rb.path = p.file_b
-		WHERE p.shared * 2.0 / (ra.n + rb.n) >= ?
-		ORDER BY degree DESC, p.shared DESC, p.file_a, p.file_b
-		LIMIT ?`, repoID, maxCommitFiles, minShared, repoID, minDegree, maxPairs).Error
+	// A temporary table belongs to the connection; the transaction keeps the
+	// steps on one connection, and the name is per repository so concurrent
+	// scans of different repositories never share it.
+	tmp := fmt.Sprintf("coupling_changes_%d", repoID)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		steps := []struct {
+			name string
+			sql  string
+			args []any
+		}{
+			{"create", `CREATE TEMP TABLE ` + tmp + ` (commit_id INTEGER NOT NULL, path TEXT NOT NULL)`, nil},
+			{"fill", `INSERT INTO ` + tmp + ` (commit_id, path)
+				SELECT cf.commit_id, cf.path
+				FROM commit_files cf
+				JOIN commits c ON c.id = cf.commit_id
+				JOIN files f ON f.repo_id = cf.repo_id AND f.path = cf.path
+				WHERE cf.repo_id = ? AND c.files_changed BETWEEN 2 AND ?`, []any{repoID, maxCommitFiles}},
+			{"index", `CREATE INDEX ` + tmp + `_commit ON ` + tmp + ` (commit_id, path)`, nil},
+			{"pairs", `WITH revisions AS (
+					SELECT path, COUNT(*) AS n FROM ` + tmp + ` GROUP BY path
+				),
+				pairs AS (
+					SELECT a.path AS file_a, b.path AS file_b, COUNT(*) AS shared
+					FROM ` + tmp + ` a
+					JOIN ` + tmp + ` b ON b.commit_id = a.commit_id AND b.path > a.path
+					GROUP BY a.path, b.path
+					HAVING COUNT(*) >= ?
+				)
+				INSERT INTO file_couplings (repo_id, file_a, file_b, shared, revisions_a, revisions_b, degree)
+				SELECT ?, p.file_a, p.file_b, p.shared, ra.n, rb.n, p.shared * 2.0 / (ra.n + rb.n) AS degree
+				FROM pairs p
+				JOIN revisions ra ON ra.path = p.file_a
+				JOIN revisions rb ON rb.path = p.file_b
+				WHERE p.shared * 2.0 / (ra.n + rb.n) >= ?
+				ORDER BY degree DESC, p.shared DESC, p.file_a, p.file_b
+				LIMIT ?`, []any{minShared, repoID, minDegree, maxPairs}},
+		}
+		for _, st := range steps {
+			if err := tx.Exec(st.sql, st.args...).Error; err != nil {
+				return fmt.Errorf("%s: %w", st.name, err)
+			}
+		}
+		return nil
+	})
+	// Dropped whether or not the transaction committed, so a retry starts clean.
+	if dropErr := db.Exec(`DROP TABLE IF EXISTS temp.` + tmp).Error; err == nil && dropErr != nil {
+		err = dropErr
+	}
 	if err != nil {
 		return fmt.Errorf("change coupling: %w", err)
 	}
