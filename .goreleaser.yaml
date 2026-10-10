@@ -1,4 +1,5 @@
-# Builds release archives for every platform from a version tag.
+# Builds and publishes the GitHub release for a version tag: archives for
+# every platform, checksums, SBOMs and notes from CHANGELOG.md.
 # Run by .github/workflows/release.yml; try it locally with
 #   goreleaser release --snapshot --clean
 version: 2
@@ -34,40 +35,51 @@ archives:
     files:
       - LICENSE
       - README.md
+      - CHANGELOG.md
       - SECURITY.md
 
 checksum:
   name_template: checksums.txt
 
+# A software bill of materials (SPDX) for each archive, made with syft.
+sboms:
+  - artifacts: archive
+
+# Release notes come from the version's CHANGELOG.md section, passed with
+# --release-notes (see scripts/release-notes.sh), not from commit subjects.
 changelog:
-  use: github
-  sort: asc
-  groups:
-    - title: Features
-      regexp: '^.*?feat(\(.+\))??!?:.+$'
-      order: 0
-    - title: Fixes
-      regexp: '^.*?fix(\(.+\))??!?:.+$'
-      order: 1
-    - title: Performance
-      regexp: '^.*?perf(\(.+\))??!?:.+$'
-      order: 2
-    - title: Other changes
-      order: 999
-  filters:
-    exclude:
-      - '^docs'
-      - '^test'
-      - '^chore'
-      - '^ci'
-      - '^style'
+  disable: true
 
 release:
+  name_template: "Repo Scout {{ .Tag }}"
   draft: false
   prerelease: auto
+  mode: replace
   footer: |
-    Verify a download came from this repository's release workflow:
+    ## Install
 
-        gh attestation verify repo-scout_{{ .Version }}_linux_amd64.tar.gz --repo {{ .Env.GITHUB_REPOSITORY }}
+    Download the archive for your system, unpack it, and run `repo-scout`. It serves the interface at http://localhost:8080 and needs `git` on your `PATH`.
 
-    Container image: `ghcr.io/{{ tolower .Env.GITHUB_REPOSITORY }}:{{ .Version }}`
+    | System | Archive |
+    | --- | --- |
+    | macOS, Apple silicon | `repo-scout_{{ .Version }}_darwin_arm64.tar.gz` |
+    | macOS, Intel | `repo-scout_{{ .Version }}_darwin_amd64.tar.gz` |
+    | Linux, x86-64 | `repo-scout_{{ .Version }}_linux_amd64.tar.gz` |
+    | Linux, ARM64 | `repo-scout_{{ .Version }}_linux_arm64.tar.gz` |
+    | Windows, x86-64 | `repo-scout_{{ .Version }}_windows_amd64.zip` |
+    | Windows, ARM64 | `repo-scout_{{ .Version }}_windows_arm64.zip` |
+
+    The binaries are not code-signed. On macOS, clear the download quarantine once with `xattr -d com.apple.quarantine repo-scout`; on Windows, choose **More info**, then **Run anyway**.
+
+    For CI, the command line alone installs with `go install github.com/KhaledSaeed18/repo-scout/cmd/repo-scout@{{ .Tag }}`.
+
+    ## Verify
+
+    Every archive is listed in `checksums.txt`, comes with an SPDX SBOM, and carries build provenance signed by this repository's release workflow:
+
+    ```sh
+    sha256sum --check --ignore-missing checksums.txt
+    gh attestation verify repo-scout_{{ .Version }}_linux_amd64.tar.gz --repo {{ .Env.GITHUB_REPOSITORY }}
+    ```
+
+    **Full changelog:** [CHANGELOG.md](https://github.com/{{ .Env.GITHUB_REPOSITORY }}/blob/{{ .Tag }}/CHANGELOG.md)

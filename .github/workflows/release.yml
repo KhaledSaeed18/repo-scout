@@ -1,8 +1,16 @@
 name: Release
 
+# Pushing a vX.Y.Z tag publishes a GitHub release. Running the workflow by
+# hand is a dry run: it builds every artifact the same way and keeps them as a
+# workflow artifact, publishing nothing.
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version whose CHANGELOG.md section becomes the notes, such as 1.2.0
+        required: true
 
 permissions:
   contents: read
@@ -12,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  binaries:
-    name: Binaries
+  release:
+    name: ${{ github.event_name == 'push' && 'Publish' || 'Dry run' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the release
@@ -23,7 +31,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # the changelog reads history
+          fetch-depth: 0
+
+      - name: Version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${INPUT_VERSION#v}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from CHANGELOG.md
+        run: scripts/release-notes.sh "${{ steps.version.outputs.version }}" > "$RUNNER_TEMP/notes.md"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -47,19 +70,40 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: frontend
 
+      - name: Set up syft
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: Run tests
         run: go test ./...
 
-      - name: Build and publish the release
+      - name: Build and publish
+        if: github.event_name == 'push'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes ${{ runner.temp }}/notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build only
+        if: github.event_name != 'push'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --release-notes ${{ runner.temp }}/notes.md
+
+      - name: Smoke test the Linux binary
+        run: |
+          tar -xzf dist/repo-scout_*_linux_amd64.tar.gz -C "$RUNNER_TEMP" repo-scout
+          "$RUNNER_TEMP/repo-scout" version
+          REPO_SCOUT_DB="$RUNNER_TEMP/smoke.db" "$RUNNER_TEMP/repo-scout" serve &
+          for _ in $(seq 1 20); do curl -fs http://127.0.0.1:8080/api/health && break; sleep 0.5; done
+          curl -fs http://127.0.0.1:8080/ | grep -q '<div id="root">'
+
       - name: Attest build provenance
+        if: github.event_name == 'push'
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
@@ -67,63 +111,15 @@ jobs:
             dist/*.zip
             dist/checksums.txt
 
-  image:
-    name: Container image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # push to ghcr.io
-      id-token: write
-      attestations: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Image name
-        # Registry paths must be lowercase; the owner name is not.
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to the GitHub container registry
-        uses: docker/login-action@v4
+      - name: Keep the dry run's artifacts
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Image tags
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-
-      - name: Build and push
-        id: push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: VERSION=${{ github.ref_name }}
-          provenance: mode=max
-          sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.IMAGE }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          name: release-dry-run
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sbom.json
+            dist/checksums.txt
+            ${{ runner.temp }}/notes.md
+          retention-days: 7
