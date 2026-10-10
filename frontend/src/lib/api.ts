@@ -9,7 +9,9 @@ import type {
   DuplicatesResponse,
   FileEntry,
   HeatmapResponse,
+  HotspotReport,
   Job,
+  KnowledgeReport,
   LargestCommit,
   Metrics,
   Ownership,
@@ -80,6 +82,10 @@ export const api = {
   duplicates: (id: number) => get<DuplicatesResponse>(`/api/repositories/${id}/duplicates`),
   architecture: (id: number) => get<Architecture>(`/api/repositories/${id}/architecture`),
   metrics: (id: number, limit = 20) => get<Metrics>(`/api/repositories/${id}/metrics?limit=${limit}`),
+  hotspots: (id: number, months: number, limit: number) =>
+    get<HotspotReport>(`/api/repositories/${id}/hotspots?months=${months}&limit=${limit}`),
+  knowledge: (id: number, depth: number, inactiveMonths: number) =>
+    get<KnowledgeReport>(`/api/repositories/${id}/knowledge?depth=${depth}&inactiveMonths=${inactiveMonths}`),
   search: (params: Record<string, string | number | boolean>) => {
     const qs = new URLSearchParams(
       Object.entries(params).map(([k, v]) => [k, String(v)]),
@@ -210,6 +216,22 @@ export const useMetrics = (id: number, limit = 20) =>
     queryKey: ['metrics', id, limit],
     queryFn: () => api.metrics(id, limit),
     enabled: id > 0,
+  })
+
+export const useHotspots = (id: number, months: number, limit = 50) =>
+  useQuery({
+    queryKey: ['hotspots', id, months, limit],
+    queryFn: () => api.hotspots(id, months, limit),
+    enabled: id > 0,
+    placeholderData: keepPreviousData,
+  })
+
+export const useKnowledge = (id: number, depth: number, inactiveMonths: number) =>
+  useQuery({
+    queryKey: ['knowledge', id, depth, inactiveMonths],
+    queryFn: () => api.knowledge(id, depth, inactiveMonths),
+    enabled: id > 0,
+    placeholderData: keepPreviousData,
   })
 
 export interface SearchParams {

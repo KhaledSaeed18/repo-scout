@@ -8,7 +8,7 @@ import Meter from '@/components/Meter'
 import RequireRepo from '@/components/RequireRepo'
 import { PageHeader, Section } from '@/components/layout'
 import { QueryView } from '@/components/states'
-import { useContributors, useCreateRepo, useHeatmap, useMetrics } from '@/lib/api'
+import { useContributors, useCreateRepo, useHeatmap, useHotspots, useMetrics } from '@/lib/api'
 import { formatBytes, formatCompact, formatNumber, formatRelative, formatRemote, plural, shortHash } from '@/lib/format'
 import { rankLanguages } from '@/lib/languages'
 import type { Repository } from '@/lib/types'
@@ -116,33 +116,36 @@ function Activity({ repoId }: { repoId: number }) {
 }
 
 function Hotspots({ repoId }: { repoId: number }) {
-  const metrics = useMetrics(repoId, 6)
+  const q = useHotspots(repoId, 12, 6)
   return (
     <Section
-      title="Most complex files"
-      description="Where changes are most likely to need care."
+      title="Hotspots"
+      description="Complex files changed most in the last year of history."
       actions={
-        <Link to="/metrics" className="text-sm text-primary hover:underline">
-          All metrics
+        <Link to="/hotspots" className="text-sm text-primary hover:underline">
+          All hotspots
         </Link>
       }
     >
-      <QueryView query={metrics} label="complexity">
-        {(m) => {
-          const files = m.mostComplexFiles.filter((f) => f.complexity > 0)
-          if (!files.length) return <p className="text-sm text-muted-foreground">No functions were analyzed.</p>
-          const max = files[0].complexity
+      <QueryView query={q} label="hotspots">
+        {({ hotspots, until }) => {
+          if (!until) return <p className="text-sm text-muted-foreground">Hotspots need Git history.</p>
+          if (!hotspots.length) return <p className="text-sm text-muted-foreground">No analyzed file changed in the last year of history.</p>
           return (
             <ol className="flex flex-col gap-3">
-              {files.map((f) => (
-                <li key={f.path} className="flex flex-col gap-1">
+              {hotspots.map((h) => (
+                <li key={h.path} className="flex flex-col gap-1">
                   <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="truncate font-mono text-[0.8125rem]" title={f.path}>
-                      {f.path}
-                    </span>
-                    <span className="shrink-0 tabular-nums text-muted-foreground">{formatNumber(f.complexity)}</span>
+                    <Link
+                      to={`/files?file=${encodeURIComponent(h.path)}`}
+                      className="truncate font-mono text-[0.8125rem] hover:text-primary hover:underline"
+                      title={h.path}
+                    >
+                      {h.path}
+                    </Link>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">{plural(h.revisions, 'change')}</span>
                   </div>
-                  <Meter value={f.complexity} max={max} />
+                  <Meter value={h.score} max={1} />
                 </li>
               ))}
             </ol>

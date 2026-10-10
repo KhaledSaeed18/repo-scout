@@ -296,3 +296,68 @@ export interface BrowseResponse {
   isRepo: boolean
   entries: BrowseEntry[]
 }
+
+export interface Hotspot {
+  path: string
+  language: string
+  complexity: number
+  linesCode: number
+  /** Commits that changed the file within the window. */
+  revisions: number
+  /** Lines added plus deleted within the window. */
+  churn: number
+  authors: number
+  lastCommitAt: string | null
+  /** Revisions times complexity, relative to the top hotspot (0..1). */
+  score: number
+}
+
+export interface HotspotReport {
+  hotspots: Hotspot[]
+  /** Start of the window; null when it covers all history. */
+  since: string | null
+  /** The latest commit, which windows count back from. Null without history. */
+  until: string | null
+  /** Analyzed files changed within the window. */
+  files: number
+}
+
+export interface KnowledgeOwner {
+  author: string
+  email: string
+  files: number
+  lines: number
+  active: boolean
+  lastCommitAt: string
+}
+
+export interface FolderKnowledge {
+  /** Empty for files at the top level. */
+  folder: string
+  files: number
+  lines: number
+  owners: number
+  topOwner: string
+  topOwnerShare: number
+  inactiveShare: number
+}
+
+export interface AtRiskFile {
+  path: string
+  lines: number
+  owner: string
+  ownerShare: number
+  ownerLastCommitAt: string
+}
+
+export interface KnowledgeReport {
+  busFactor: number
+  files: number
+  lines: number
+  inactiveLines: number
+  owners: KnowledgeOwner[]
+  folders: FolderKnowledge[]
+  atRisk: AtRiskFile[]
+  /** Authors with a commit after this are active. Null without history. */
+  activeSince: string | null
+}

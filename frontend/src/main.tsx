@@ -13,10 +13,12 @@ const Activity = lazy(() => import('./pages/history/Activity'))
 const Commits = lazy(() => import('./pages/history/Commits'))
 const Contributors = lazy(() => import('./pages/history/Contributors'))
 const Refs = lazy(() => import('./pages/history/Refs'))
+const Knowledge = lazy(() => import('./pages/history/Knowledge'))
 const Files = lazy(() => import('./pages/code/Files'))
 const Search = lazy(() => import('./pages/code/Search'))
 const Metrics = lazy(() => import('./pages/code/Metrics'))
 const Duplicates = lazy(() => import('./pages/code/Duplicates'))
+const Hotspots = lazy(() => import('./pages/code/Hotspots'))
 const Architecture = lazy(() => import('./pages/structure/Architecture'))
 const Dependencies = lazy(() => import('./pages/structure/Dependencies'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -44,10 +46,12 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/activity" element={<Activity />} />
               <Route path="/commits" element={<Commits />} />
               <Route path="/contributors" element={<Contributors />} />
+              <Route path="/knowledge" element={<Knowledge />} />
               <Route path="/branches" element={<Refs />} />
               <Route path="/files" element={<Files />} />
               <Route path="/search" element={<Search />} />
               <Route path="/metrics" element={<Metrics />} />
+              <Route path="/hotspots" element={<Hotspots />} />
               <Route path="/duplicates" element={<Duplicates />} />
               <Route path="/architecture" element={<Architecture />} />
               <Route path="/dependencies" element={<Dependencies />} />
