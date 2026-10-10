@@ -1,7 +1,8 @@
 // Package metrics measures per-file code quality signals: cyclomatic
-// complexity, import/export counts, function length, and nesting depth. The
-// analyzers are language-aware regular-expression heuristics; they are fast
-// enough to run over every file in a large repository.
+// complexity, import/export counts, function length, and nesting depth. Go
+// is parsed with the standard library (see goast.go); other languages use
+// language-aware regular-expression heuristics, fast enough to run over
+// every file in a large repository.
 package metrics
 
 import (
@@ -62,6 +63,12 @@ func Analyze(f models.File, content string) Result {
 		return Result{}
 	}
 	src := sanitize(lc, content)
+	if f.Language == "Go" {
+		if r, ok := analyzeGo(content); ok {
+			r.AvgNesting, r.MaxNesting = nesting(lc, src)
+			return r
+		}
+	}
 	r := Result{}
 	if lc.importFn != nil {
 		r.Imports = lc.importFn(src)

@@ -97,7 +97,8 @@ the graph's detail level, and inspect the architecture findings.
   since the last scan, bus factor, cycles and hidden dependencies
 - Change coupling: files that change together, with hidden dependencies
   (no import, shared package, test or lockfile to explain them) called out
-- Metrics: cyclomatic complexity, function length, nesting, imports/exports,
+- Metrics: cyclomatic complexity (exact for Go, parsed with the standard
+  library; pattern based for other languages), function length, nesting, imports/exports,
   largest and most complex files, and how each headline number moved across past
   scans
 - Background jobs with pause / resume / cancel, queue, worker pool, progress,
