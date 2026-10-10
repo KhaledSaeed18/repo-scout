@@ -46,9 +46,8 @@ sboms:
   - artifacts: archive
 
 # Release notes come from the version's CHANGELOG.md section, passed with
-# --release-notes (see scripts/release-notes.sh), not from commit subjects.
-changelog:
-  disable: true
+# --release-notes (see scripts/release-notes.sh), which replaces the
+# commit-based changelog. Do not set changelog.disable: it drops those notes.
 
 release:
   name_template: "Repo Scout {{ .Tag }}"

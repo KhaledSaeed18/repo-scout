@@ -30,4 +30,20 @@ if [[ -z "$notes" ]]; then
   echo "error: $changelog has no section for $version" >&2
   exit 1
 fi
-printf '%s\n' "$notes"
+
+# GitHub renders every line break in a release body, so join the lines of
+# each paragraph and list item. Headings, tables, code blocks and blank lines
+# keep their own lines.
+printf '%s\n' "$notes" | awk '
+  function flush() { if (buf != "") { print buf; buf = "" } }
+  /^```/ { flush(); print; fence = !fence; next }
+  fence { print; next }
+  /^[[:space:]]*$/ { flush(); print; next }
+  /^(#|\||[-*+] |[0-9]+\. )/ { flush(); buf = $0; next }
+  {
+    line = $0
+    sub(/^[[:space:]]+/, "", line)
+    buf = (buf == "") ? line : buf " " line
+  }
+  END { flush() }
+'
