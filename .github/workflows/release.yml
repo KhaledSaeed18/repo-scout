@@ -49,7 +49,7 @@ jobs:
         run: scripts/release-notes.sh "${{ steps.version.outputs.version }}" > "$RUNNER_TEMP/notes.md"
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
