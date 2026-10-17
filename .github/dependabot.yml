@@ -1,5 +1,6 @@
-# Weekly, grouped dependency updates. Minor and patch updates arrive as one
-# pull request per ecosystem; major updates come one by one to be reviewed.
+# Weekly updates: minor and patch releases are grouped per ecosystem.
+# All GitHub Actions versions share one PR; application major upgrades
+# stay separate for compatibility review. Security updates keep their defaults.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -33,7 +34,7 @@ updates:
       interval: weekly
     groups:
       actions:
-        update-types: [minor, patch]
+        patterns: ["*"]
     commit-message:
       prefix: ci(deps)
 
@@ -41,6 +42,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      containers:
+        update-types: [minor, patch]
     ignore:
       # Node moves to a new LTS deliberately: odd releases are short-lived and
       # Node 25 dropped the corepack the image build uses.

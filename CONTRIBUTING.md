@@ -357,6 +357,18 @@ stays a clean sequence of conventional commits.
 By contributing, you agree that your contributions are licensed under the
 project's [MIT License](LICENSE).
 
+### Dependency updates
+
+Dependabot checks Go, frontend, GitHub Actions and Docker dependencies weekly.
+Minor and patch updates are grouped per ecosystem; all GitHub Actions updates,
+including major versions, share one PR. Major application and container upgrades
+stay separate for compatibility review. Security updates keep their existing
+behavior and are not restricted to the weekly version-update groups.
+
+Maintainers squash-merge dependency PRs after CI passes. Keep the deliberate
+Node and Node type major-version exclusions in `.github/dependabot.yml` when
+changing grouping rules; grouping should reduce noise without disabling updates.
+
 ## Releases
 
 Releases follow [Semantic Versioning](https://semver.org); the README's

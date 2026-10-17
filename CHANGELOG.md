@@ -7,6 +7,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html); see
 
 ## [Unreleased]
 
+### Changed
+
+- Update Go and frontend dependencies and refresh build and release tooling.
+- Reduce dependency PR noise by grouping all GitHub Actions updates together
+  and Docker minor and patch updates together, while retaining security updates
+  and separate compatibility reviews for major application upgrades.
+
 ### Fixed
 
 - Binaries installed with `go install` report their version instead of
