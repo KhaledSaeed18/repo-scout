@@ -19,7 +19,7 @@ COPY frontend/ ./
 RUN pnpm run build
 
 # Cross-compile the server for the target platform without emulation.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS server
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS server
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
