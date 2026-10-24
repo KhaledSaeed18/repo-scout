@@ -3,7 +3,7 @@ module github.com/KhaledSaeed18/repo-scout
 go 1.26
 
 require (
-	github.com/getkin/kin-openapi v0.150.0
+	github.com/getkin/kin-openapi v0.151.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/gorilla/websocket v1.5.3
